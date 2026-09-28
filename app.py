@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -78,8 +79,28 @@ with st.sidebar:
     if source_mode == "Upload CSV":
         uploaded = st.file_uploader("Upload company universe CSV", type=["csv"])
     elif source_mode == "Public web (Tavily)":
-        tavily_key = st.text_input("Tavily API key", type="password")
-        max_results = st.slider("Results per search query", 3, 10, 5)
+        tavily_secret = ""
+        try:
+            tavily_secret = st.secrets.get("TAVILY_API_KEY", "")
+        except Exception:
+            tavily_secret = ""
+
+        tavily_key = tavily_secret or os.getenv("TAVILY_API_KEY", "")
+
+        if tavily_key:
+            st.success("Public web discovery is configured.")
+        else:
+            st.warning(
+                "Public web discovery is not configured on the server. "
+                "Add TAVILY_API_KEY to Streamlit Secrets, or provide a temporary key below."
+            )
+            tavily_key = st.text_input(
+                "Temporary Tavily API key",
+                type="password",
+                help="This value is used only for the current session and is not stored by the app.",
+            )
+
+        max_results = st.slider("Results per search query", 3, 7, 4)
 
     run = st.button("Discover & Rank", type="primary", use_container_width=True)
 
@@ -116,7 +137,7 @@ if run:
             source_df = pd.read_csv(uploaded)
 
         else:
-            queries = build_search_queries(profile)
+            queries = build_search_queries(profile, max_queries=6)
             if not queries:
                 st.warning("Define at least an industry, market or business model.")
                 st.stop()
@@ -128,6 +149,7 @@ if run:
                 queries=queries,
                 api_key=tavily_key,
                 max_results_per_query=max_results,
+                search_depth="basic",
             )
 
         st.session_state.ranked_candidates = screen_candidates(source_df, profile)
@@ -222,7 +244,22 @@ st.subheader("Optional AI Evidence Brief")
 st.caption(
     "AI is used only after deterministic discovery scoring and is instructed not to invent company facts."
 )
-openai_key = st.text_input("OpenAI API key (optional)", type="password")
+openai_secret = ""
+try:
+    openai_secret = st.secrets.get("OPENAI_API_KEY", "")
+except Exception:
+    openai_secret = ""
+
+openai_key = openai_secret or os.getenv("OPENAI_API_KEY", "")
+
+if openai_key:
+    st.caption("AI evidence brief is enabled.")
+else:
+    openai_key = st.text_input(
+        "OpenAI API key (optional)",
+        type="password",
+        help="Optional. Add OPENAI_API_KEY to Streamlit Secrets to enable this for all visitors.",
+    )
 
 if st.button("Generate Evidence-Aware Brief"):
     brief = generate_evidence_aware_brief(
