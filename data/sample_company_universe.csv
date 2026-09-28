@@ -1,0 +1,11 @@
+company_name,country,region,industry,business_model,company_size,source_title,source_snippet,source_url
+Solis Distribution,Italy,Europe,Renewable Energy,Distributor,180,Solis Distribution - Solar and Storage,"B2B distributor of photovoltaic modules, inverters and commercial energy storage systems serving installers and EPC partners.",https://example.com/solis-distribution
+Energia Wholesale,Italy,Europe,Renewable Energy,Wholesaler,75,Energia Wholesale,"Wholesale supplier of solar equipment, batteries and energy-management hardware for professional customers.",https://example.com/energia-wholesale
+Alpine EPC,Italy,Europe,Renewable Energy,EPC,350,Alpine EPC,"Engineering and construction company delivering utility-scale renewable-energy projects.",https://example.com/alpine-epc
+Maison Solaire,France,Europe,Renewable Energy,Distributor,120,Maison Solaire,"French B2B solar distributor supplying photovoltaic and storage equipment to regional partners.",https://example.com/maison-solaire
+Volt Retail,France,Europe,Renewable Energy,Retailer,900,Volt Retail,"Consumer-focused energy retailer offering residential installation services and home-energy packages.",https://example.com/volt-retail
+Nordic Storage,Sweden,Europe,Energy Storage,Manufacturer,420,Nordic Storage,"Manufacturer of battery storage systems for commercial and industrial energy applications.",https://example.com/nordic-storage
+Andina Solar Trade,Colombia,LATAM,Renewable Energy,Distributor,95,Andina Solar Trade,"Regional distributor of photovoltaic equipment and storage products for B2B customers.",https://example.com/andina-solar
+Gulf Power Systems,UAE,MENA,Renewable Energy,Distributor,260,Gulf Power Systems,"Distributor and systems integrator for commercial solar, storage and power-management solutions.",https://example.com/gulf-power
+Casa Solar Installazioni,Italy,Europe,Renewable Energy,Installer,25,Casa Solar Installazioni,"Residential installer focused on rooftop solar projects for homeowners.",https://example.com/casa-solar
+EuroGrid Components,Germany,Europe,Electrical Equipment,Wholesaler,480,EuroGrid Components,"B2B wholesaler of electrical infrastructure components for industrial and renewable-energy projects.",https://example.com/eurogrid
