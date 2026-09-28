@@ -277,6 +277,30 @@ streamlit run app.py
 
 ---
 
+## Deployment
+
+The repository includes a `render.yaml` blueprint for deployment as a Streamlit web service on Render.
+
+The service uses:
+
+```text
+Build: pip install -r requirements.txt
+Start: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
+```
+
+The app works without external credentials in **Sample dataset** and **Upload CSV** modes.
+
+Optional environment variables:
+
+```text
+OPENAI_API_KEY
+OPENAI_MODEL
+```
+
+The Tavily key is currently entered at runtime in the Streamlit interface for public-web discovery.
+
+---
+
 ## Testing
 
 ```bash
