@@ -2,6 +2,8 @@
 
 ### Evidence-Aware Target Account Discovery | Lead Generation | Market Adaptation | Commercial Intelligence
 
+[![Python CI](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml)
+
 > **IDENTIFY before you PRIORITIZE.**
 
 Opportunity Discovery Intelligence is a configurable Business Development application for discovering and screening target accounts based on a client-specific market profile.
@@ -21,6 +23,8 @@ The scoring engine remains deterministic and explainable. AI is optional and is 
 ---
 
 ## Role in the Commercial Intelligence Ecosystem
+
+This application is the **IDENTIFY** stage of the broader [AI Business Development Toolkit](https://github.com/Eambrosin/AI-Business-Development-Toolkit).
 
 ```text
 IDENTIFY
