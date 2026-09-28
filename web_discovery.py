@@ -39,6 +39,7 @@ def discover_with_tavily(
     api_key: str,
     max_results_per_query: int = 5,
     timeout: int = 30,
+    search_depth: str = "basic",
 ) -> pd.DataFrame:
     if not api_key:
         raise ValueError("A Tavily API key is required for public-web discovery.")
@@ -52,7 +53,7 @@ def discover_with_tavily(
             json={
                 "api_key": api_key,
                 "query": query,
-                "search_depth": "advanced",
+                "search_depth": search_depth,
                 "max_results": max_results_per_query,
                 "include_answer": False,
                 "include_raw_content": False,
