@@ -297,7 +297,25 @@ OPENAI_API_KEY
 OPENAI_MODEL
 ```
 
-The Tavily key is currently entered at runtime in the Streamlit interface for public-web discovery.
+For a public deployment, configure `TAVILY_API_KEY` in Streamlit Secrets so visitors can use public-web discovery without seeing or entering the key. If no server-side key is configured, the app still allows a temporary session key for development/testing.
+
+---
+
+### Streamlit Community Cloud Secrets
+
+For the deployed portfolio app, configure secrets in the Streamlit Community Cloud app settings rather than committing credentials to GitHub.
+
+```toml
+TAVILY_API_KEY = "your-tavily-key"
+OPENAI_API_KEY = "your-openai-key"
+```
+
+`TAVILY_API_KEY` enables Public Web Discovery for visitors.  
+`OPENAI_API_KEY` is optional and enables the AI Evidence Brief.
+
+Never commit `.streamlit/secrets.toml` or API keys to the repository.
+
+The public-web discovery mode uses Tavily **basic** search and limits each run to a small number of generated queries/results to reduce credit consumption in a portfolio environment.
 
 ---
 
