@@ -442,7 +442,9 @@ def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
     handoff["industry"] = ranked.get("industry", "")
     handoff["company_size"] = ranked.get("company_size", pd.NA)
     handoff["estimated_deal_value_usd"] = 0
+    handoff["deal_value_status"] = "unknown"
     handoff["engagement_signal"] = "cold"
+    handoff["engagement_status"] = "unverified"
     handoff["discovery_score"] = ranked.get("discovery_score", 0)
     handoff["discovery_confidence"] = ranked.get("confidence", "")
     handoff["discovery_source_url"] = ranked.get("source_url", "")
