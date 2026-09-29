@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import re
 from typing import Iterable
 
 import pandas as pd
@@ -30,6 +31,96 @@ def _norm(value) -> str:
 
 def _contains(text: str, term: str) -> bool:
     return _norm(term) in _norm(text)
+
+
+def _contains_phrase(text: str, term: str) -> bool:
+    normalized_text = _norm(text)
+    normalized_term = _norm(term)
+    if not normalized_text or not normalized_term:
+        return False
+    pattern = r"(?<![a-z0-9à-ÿ])" + re.escape(normalized_term) + r"(?![a-z0-9à-ÿ])"
+    return bool(re.search(pattern, normalized_text, flags=re.I))
+
+
+def assess_territory_scope(
+    row: pd.Series | dict,
+    territory: dict,
+) -> dict:
+    """
+    Detect explicit source evidence that points outside the selected territory.
+
+    Search-query terms are intentionally excluded so a scoped query cannot override
+    contradictory evidence in the actual result title/snippet/URL.
+    """
+    evidence = " ".join(
+        [
+            _text(row.get("company_name")),
+            _text(row.get("source_title")),
+            _text(row.get("source_snippet")),
+            _text(row.get("source_url")),
+        ]
+    )
+
+    in_scope_terms = []
+    for cluster in territory.get("clusters", []):
+        in_scope_terms.extend(cluster.get("cities", []))
+        in_scope_terms.extend(cluster.get("province_aliases", []))
+        in_scope_terms.append(cluster.get("region", ""))
+
+    observed_in_scope = [
+        term
+        for term in dict.fromkeys(in_scope_terms)
+        if term and _contains_phrase(evidence, term)
+    ]
+    observed_out_scope = [
+        term
+        for term in territory.get("out_of_scope_location_signals", [])
+        if term and _contains_phrase(evidence, term)
+    ]
+
+    conflict = bool(observed_out_scope and not observed_in_scope)
+
+    if conflict:
+        status = "Explicit source evidence outside selected territory"
+    elif observed_in_scope:
+        status = "Source evidence supports selected territory"
+    else:
+        status = "No explicit source-territory evidence"
+
+    return {
+        "territory_scope_conflict": conflict,
+        "territory_scope_status": status,
+        "territory_scope_evidence": ", ".join(observed_in_scope[:4]),
+        "out_of_scope_evidence": ", ".join(observed_out_scope[:4]),
+    }
+
+
+def assess_vendor_scope(
+    row: pd.Series | dict,
+    vendor_profile: dict | None,
+) -> dict:
+    if not vendor_profile:
+        return {
+            "vendor_scope_conflict": False,
+            "vendor_scope_evidence": "",
+        }
+
+    identity_evidence = " ".join(
+        [
+            _text(row.get("company_name")),
+            _text(row.get("source_title")),
+            _text(row.get("source_domain")),
+        ]
+    )
+    matched = [
+        term
+        for term in vendor_profile.get("non_target_vendor_signals", [])
+        if term and _contains_phrase(identity_evidence, term)
+    ]
+    return {
+        "vendor_scope_conflict": bool(matched),
+        "vendor_scope_evidence": ", ".join(matched[:4]),
+    }
 
 
 def selected_clusters(
@@ -329,6 +420,8 @@ def apply_territory_intelligence(
     for _, row in ranked.iterrows():
         enriched = row.to_dict()
         location = infer_territory_location(row, territory)
+        scope = assess_territory_scope(row, territory)
+        vendor_scope = assess_vendor_scope(row, vendor_profile)
         technology = extract_technology_signals(row, vendor_profile)
 
         discovery_score = float(row.get("discovery_score", 0) or 0)
@@ -365,7 +458,23 @@ def apply_territory_intelligence(
             account_confidence = "Low"
 
         enriched.update(location)
+        enriched.update(scope)
+        enriched.update(vendor_scope)
         enriched.update(technology)
+
+        if scope["territory_scope_conflict"]:
+            enriched["target_account_ready"] = False
+            enriched["commercial_track"] = "Held-back Research Result"
+            enriched["target_account_reason"] = (
+                "Source evidence points outside the selected commercial territory"
+            )
+
+        if vendor_scope["vendor_scope_conflict"]:
+            enriched["target_account_ready"] = False
+            enriched["commercial_track"] = "Partner / Vendor Candidate"
+            enriched["target_account_reason"] = (
+                "Known vendor/market supplier signal; not treated as a target clinic/practice"
+            )
         enriched["territory_profile_id"] = territory.get("territory_profile_id", "")
         enriched["vendor_profile_id"] = (
             vendor_profile.get("vendor_profile_id", "")
@@ -376,12 +485,17 @@ def apply_territory_intelligence(
         enriched["account_opportunity_breakdown"] = account_breakdown
         enriched["account_evidence_confidence_score"] = account_confidence_score
         enriched["account_evidence_confidence"] = account_confidence
-        enriched["territory_status"] = _territory_status(
-            account_score,
-            confidence_score,
-            location_confidence,
-            _text(row.get("professional_setting")),
-        )
+        if scope["territory_scope_conflict"]:
+            enriched["territory_status"] = "Out of Territory"
+        elif vendor_scope["vendor_scope_conflict"]:
+            enriched["territory_status"] = "Partner / Vendor"
+        else:
+            enriched["territory_status"] = _territory_status(
+                account_score,
+                confidence_score,
+                location_confidence,
+                _text(row.get("professional_setting")),
+            )
         rows.append(enriched)
 
     result = pd.DataFrame(rows)
