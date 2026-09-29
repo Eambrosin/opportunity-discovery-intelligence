@@ -457,84 +457,119 @@ def qualification_handoff(
 ) -> pd.DataFrame:
     working = ranked.copy()
 
+    def aligned_series(column: str, default="") -> pd.Series:
+        if column in working.columns:
+            return working[column].copy()
+        return pd.Series([default] * len(working), index=working.index)
+
     if "qualification_ready" in working.columns:
-        ready_mask = working["qualification_ready"].fillna(False).astype(bool)
+        ready_raw = aligned_series("qualification_ready", False)
+        ready_mask = (
+            ready_raw.fillna(False)
+            .map(
+                lambda value: (
+                    value
+                    if isinstance(value, bool)
+                    else str(value).strip().lower() in {"true", "1", "yes"}
+                )
+            )
+        )
         working = working[ready_mask].copy()
 
     if working.empty:
         return pd.DataFrame()
 
     profile_country = ""
-    if profile and len(profile.countries) == 1:
+    if profile is not None and len(profile.countries) == 1:
         profile_country = profile.countries[0]
 
-    profile_industry = profile.industry if profile else ""
+    profile_industry = profile.industry if profile is not None else ""
 
     handoff = pd.DataFrame(index=working.index)
-    handoff["schema_version"] = "1.0"
-    handoff["market_profile_id"] = working.get("market_profile_id", "")
-    handoff["source_stage"] = "IDENTIFY"
-    handoff["company_name"] = working.get("company_name", "")
+    handoff["schema_version"] = pd.Series(
+        ["1.0"] * len(working),
+        index=working.index,
+    )
+    handoff["market_profile_id"] = aligned_series("market_profile_id", "")
+    handoff["source_stage"] = pd.Series(
+        ["IDENTIFY"] * len(working),
+        index=working.index,
+    )
+    handoff["company_name"] = aligned_series("company_name", "").fillna("").astype(str)
 
-    observed_country = working.get(
-        "country",
-        pd.Series("", index=working.index),
-    ).fillna("").astype(str).str.strip()
-
-    handoff["country"] = observed_country.where(
-        observed_country != "",
+    observed_country = (
+        aligned_series("country", "")
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    handoff["country"] = observed_country.mask(
+        observed_country.eq(""),
         profile_country,
     )
-    handoff["country_basis"] = observed_country.apply(
+    handoff["country_basis"] = observed_country.map(
         lambda value: "source observed" if value else "target-market context"
     )
 
-    observed_region = working.get(
-        "region",
-        pd.Series("", index=working.index),
-    ).fillna("").astype(str).str.strip()
-
-    derived_region = handoff["country"].map(COUNTRY_TO_COMMERCIAL_REGION).fillna("")
-    handoff["region"] = observed_region.where(
-        observed_region != "",
+    observed_region = (
+        aligned_series("region", "")
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    derived_region = handoff["country"].map(
+        COUNTRY_TO_COMMERCIAL_REGION
+    ).fillna("")
+    handoff["region"] = observed_region.mask(
+        observed_region.eq(""),
         derived_region,
     )
-    handoff["region_basis"] = observed_region.apply(
+    handoff["region_basis"] = observed_region.map(
         lambda value: "source observed" if value else "derived from country context"
     )
 
-    observed_industry = working.get(
-        "industry",
-        pd.Series("", index=working.index),
-    ).fillna("").astype(str).str.strip()
-
-    handoff["industry"] = observed_industry.where(
-        observed_industry != "",
+    observed_industry = (
+        aligned_series("industry", "")
+        .fillna("")
+        .astype(str)
+        .str.strip()
+    )
+    handoff["industry"] = observed_industry.mask(
+        observed_industry.eq(""),
         profile_industry,
     )
-    handoff["industry_basis"] = observed_industry.apply(
+    handoff["industry_basis"] = observed_industry.map(
         lambda value: "source observed" if value else "market-profile context"
     )
 
-    handoff["company_size"] = working.get("company_size", pd.NA)
-    handoff["company_size_status"] = handoff["company_size"].apply(
-        lambda value: (
-            "observed"
-            if not pd.isna(value)
-            else "unknown"
-        )
+    company_size = pd.to_numeric(
+        aligned_series("company_size", pd.NA),
+        errors="coerce",
+    )
+    handoff["company_size"] = company_size
+    handoff["company_size_status"] = company_size.notna().map(
+        {True: "observed", False: "unknown"}
     )
 
-    handoff["estimated_deal_value_usd"] = 0
+    handoff["estimated_deal_value_usd"] = 0.0
     handoff["deal_value_status"] = "unknown"
     handoff["engagement_signal"] = ""
     handoff["engagement_status"] = "unverified"
 
-    handoff["discovery_score"] = working.get("discovery_score", 0)
-    handoff["discovery_confidence"] = working.get("confidence", "")
-    handoff["discovery_source_url"] = working.get("source_url", "")
-    handoff["account_identity_score"] = working.get("account_identity_score", pd.NA)
-    handoff["account_identity_status"] = working.get("account_identity_status", "")
+    handoff["discovery_score"] = pd.to_numeric(
+        aligned_series("discovery_score", 0),
+        errors="coerce",
+    ).fillna(0)
+    handoff["discovery_confidence"] = aligned_series("confidence", "")
+    handoff["discovery_source_url"] = aligned_series("source_url", "")
+    handoff["account_identity_score"] = pd.to_numeric(
+        aligned_series("account_identity_score", pd.NA),
+        errors="coerce",
+    )
+    handoff["account_identity_status"] = aligned_series(
+        "account_identity_status",
+        "",
+    )
 
     optional_fields = [
         "territory_profile_id",
@@ -558,3 +593,4 @@ def qualification_handoff(
 
     handoff["requires_manual_qualification"] = True
     return handoff.reset_index(drop=True)
+
