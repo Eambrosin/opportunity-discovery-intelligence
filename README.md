@@ -69,15 +69,18 @@ Users can define:
 - target decision-maker roles
 - value proposition / commercial offer
 
-This makes the application adaptable to use cases such as:
+Current reusable profiles include:
 
-- medical-aesthetics clinics, physicians and estheticians in Italy
-- solar distributors in Italy
-- food importers in the GCC
-- SaaS channel partners in Spain
-- logistics companies in Brazil
-- industrial distributors in France
-- strategic B2B accounts by geography and company profile
+- Renewable Energy
+- Agribusiness
+- Logistics & Trade
+- Fintech
+- Real Estate
+- Government / Public Sector
+- Medical Aesthetics
+- Custom
+
+Each preset is editable before execution, so the profile layer accelerates setup without restricting the engine to predefined sectors.
 
 The medical-aesthetics preset includes localized Italian discovery language, clinic/practice archetypes, treatment-technology signals and role profiles. It intentionally keeps device/professional eligibility as a validation step rather than assuming every aesthetic professional can use every device.
 
@@ -172,7 +175,7 @@ Common aliases such as `company`, `name`, `employees`, `sector` and `website` ar
 
 Optional Tavily integration generates market-specific search queries and converts public search results into candidate accounts.
 
-The application deduplicates results by domain and preserves the source URL and evidence snippet.
+The application preserves source URLs and evidence snippets, removes exact duplicates and uses controlled per-domain limits so fragmented markets can still return multiple useful clinics, practices or professionals from the same directory source.
 
 Account discovery intentionally avoids social-network results so company research stays evidence-focused.
 
@@ -237,7 +240,7 @@ The handoff intentionally marks discovery-stage assumptions for manual enrichmen
 
 Unknown deal value is exported as `0` and initial engagement as `cold`; these fields should be validated before formal opportunity qualification.
 
-Future integration will allow discovery evidence and qualification context to move between applications with less manual work.
+The export follows the portfolio's shared Commercial Intelligence handoff contract using fields such as `schema_version`, `source_stage` and `market_profile_id`. The app also provides direct navigation to PRIORITIZE and ENGAGE.
 
 ---
 
