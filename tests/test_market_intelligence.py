@@ -1,7 +1,9 @@
 import unittest
 
+import pandas as pd
+
 from contact_discovery import _parse_person_title, score_contact_result
-from discovery_engine import TargetProfile, build_search_queries
+from discovery_engine import TargetProfile, build_search_queries, screen_candidates
 from presets import get_preset
 
 
@@ -54,6 +56,28 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertEqual(result["contact_confidence"], "Low")
         self.assertLess(result["contact_relevance_score"], 50)
+
+
+    def test_medical_aesthetics_esthetician_setting_requires_validation(self):
+        profile = TargetProfile(
+            industry="Medical Aesthetics",
+            countries=["Italy"],
+            business_models=["Centro estetico", "Estetista"],
+            required_keywords=["criolipolisi"],
+        )
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Beauty Center",
+                "source_title": "Centro estetico Example",
+                "source_snippet": "Estetista con trattamenti corpo e criolipolisi.",
+                "source_url": "https://example.com",
+            }]
+        )
+        ranked = screen_candidates(data, profile)
+        self.assertEqual(
+            ranked.iloc[0]["professional_setting"],
+            "Professional/device eligibility to validate",
+        )
 
 
 if __name__ == "__main__":
