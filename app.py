@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from account_enrichment import enrich_account
 from ai_insights import generate_evidence_aware_brief
 from contact_discovery import discover_linkedin_contacts, discover_linkedin_market_professionals
 from discovery_engine import (
@@ -57,6 +58,43 @@ def get_secret(name: str) -> str:
     except Exception:
         value = ""
     return value or os.getenv(name, "")
+
+
+def update_account_in_session(
+    company_name: str,
+    source_url: str,
+    values: dict,
+) -> None:
+    dataframe = st.session_state.get(
+        "ranked_candidates",
+        pd.DataFrame(),
+    )
+    if not isinstance(dataframe, pd.DataFrame) or dataframe.empty:
+        return
+
+    mask = (
+        dataframe["company_name"]
+        .fillna("")
+        .astype(str)
+        .eq(str(company_name))
+    )
+
+    if source_url and "source_url" in dataframe.columns:
+        source_mask = (
+            dataframe["source_url"]
+            .fillna("")
+            .astype(str)
+            .eq(str(source_url))
+        )
+        if source_mask.any():
+            mask = mask & source_mask
+
+    for key, value in values.items():
+        if key not in dataframe.columns:
+            dataframe[key] = pd.NA
+        dataframe.loc[mask, key] = value
+
+    st.session_state.ranked_candidates = dataframe
 
 
 server_tavily_key = get_secret("TAVILY_API_KEY")
@@ -613,6 +651,8 @@ display_columns = [
     "market_country",
     "market_industry",
     "account_type",
+    "enrichment_status",
+    "account_data_completeness",
     "company_size",
     "discovery_score",
     "confidence",
