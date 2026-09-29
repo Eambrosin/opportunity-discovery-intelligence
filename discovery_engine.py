@@ -770,6 +770,13 @@ def qualification_handoff(
         "enrichment_source_url",
         "enrichment_source_urls",
         "enrichment_evidence",
+        "decision_maker_candidate_found",
+        "decision_maker_verified",
+        "decision_maker_name",
+        "decision_maker_headline",
+        "decision_maker_linkedin",
+        "decision_maker_confidence",
+        "decision_maker_relevance_score",
     ]
     for field_name in optional_fields:
         if field_name in working.columns:
