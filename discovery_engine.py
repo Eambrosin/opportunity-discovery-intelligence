@@ -383,7 +383,23 @@ def _medical_aesthetics_entity_classification(
     aesthetic_center = any(term in normalized for term in aesthetic_center_terms)
     supplier = any(term in normalized for term in supplier_terms)
 
-    if supplier and not (practitioner or provider or aesthetic_center):
+    identity_text = _norm(
+        " ".join(
+            [
+                _text(row.get("company_name")),
+                _text(row.get("source_title")),
+            ]
+        )
+    )
+    supplier_primary = any(term in identity_text for term in supplier_terms)
+    provider_identity = any(term in identity_text for term in provider_terms)
+    practitioner_identity = any(term in identity_text for term in practitioner_terms)
+    aesthetic_identity = any(term in identity_text for term in aesthetic_center_terms)
+
+    if supplier and (
+        supplier_primary
+        or not (practitioner_identity or provider_identity or aesthetic_identity)
+    ):
         return {
             "commercial_track": "Partner / Vendor Candidate",
             "target_account_ready": False,
