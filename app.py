@@ -738,30 +738,30 @@ if "account_evidence_confidence" in ranking_view.columns:
 
 display_columns = [
     "company_name",
-    "market_country",
-    "market_industry",
-    "account_type",
+    "account_opportunity_score",
     "qualification_readiness_status",
     "qualification_readiness_score",
     "sales_motion",
     "buyer_access_status",
+    "territory_province",
+    "territory_city",
+    "account_type",
+    "confidence",
+    "discovery_score",
+    "recommended_action",
     "enrichment_status",
     "account_data_completeness",
+    "market_country",
+    "market_industry",
     "company_size",
-    "discovery_score",
-    "confidence",
-    "recommended_action",
     "why_relevant",
     "professional_setting",
     "commercial_track",
     "target_account_reason",
     "account_identity_score",
     "account_identity_status",
-    "account_opportunity_score",
     "territory_status",
     "territory_region",
-    "territory_province",
-    "territory_city",
     "observed_technology_axes",
     "source_domain",
     "source_url",
@@ -1074,10 +1074,20 @@ if territory_mode and "territory_location_basis" in selected.index:
                 "Not observed means not present in the current evidence set — it does not mean the clinic does not offer that technology."
             )
 
-if selected.get("source_url"):
-    st.markdown(f"**Evidence:** {selected['source_url']}")
-if selected.get("source_snippet"):
-    st.write(selected["source_snippet"])
+source_url = safe_text(selected.get("source_url", ""))
+source_snippet = safe_text(selected.get("source_snippet", ""))
+
+if source_url:
+    st.markdown(f"**Primary evidence source:** {source_url}")
+
+if source_snippet:
+    evidence_preview = source_snippet[:650]
+    if len(source_snippet) > 650:
+        evidence_preview += "…"
+    st.caption(evidence_preview)
+
+    with st.expander("View full source evidence excerpt", expanded=False):
+        st.write(source_snippet)
 
 with st.expander("Explainable score"):
     st.markdown("**Discovery fit score**")
@@ -1505,7 +1515,70 @@ if st.button("Generate Evidence-Aware Brief"):
     else:
         st.json(brief)
 
-st.subheader("Export")
+st.subheader("Continue the Workflow")
+st.caption(
+    "Turn the current discovery research into a working commercial queue before exporting data."
+)
+
+queue_columns = [
+    "company_name",
+    "account_opportunity_score",
+    "qualification_readiness_status",
+    "qualification_readiness_score",
+    "sales_motion",
+    "buyer_access_status",
+    "territory_province",
+    "next_best_action",
+]
+queue_view = ranked[
+    [column for column in queue_columns if column in ranked.columns]
+].head(10).copy()
+
+if not queue_view.empty:
+    st.markdown("**Commercial action queue — top accounts**")
+    st.dataframe(
+        queue_view,
+        use_container_width=True,
+        hide_index=True,
+    )
+
+selected_motion = safe_text(
+    selected.get("sales_motion", ""),
+    "Research & Validate",
+)
+selected_next_action = safe_text(
+    selected.get("next_best_action", ""),
+    "Review the evidence and complete qualification research.",
+)
+selected_readiness = safe_text(
+    selected.get("qualification_readiness_status", ""),
+    "Research Required",
+)
+
+c1, c2, c3 = st.columns(3)
+c1.metric("Selected Account", selected_company)
+c2.metric("Current Sales Motion", selected_motion)
+c3.metric("Qualification State", selected_readiness)
+
+st.info(
+    f"Next action for {selected_company}: {selected_next_action}"
+)
+
+nav_a, nav_b = st.columns(2)
+with nav_a:
+    st.link_button(
+        "Open PRIORITIZE — Lead Qualification",
+        "https://lead-qualification-scorer-eambrosin.streamlit.app/",
+        use_container_width=True,
+    )
+with nav_b:
+    st.link_button(
+        "Open ENGAGE — Adaptive Outreach",
+        "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
+        use_container_width=True,
+    )
+
+st.subheader("Export & Handoff")
 
 target_csv = ranked.drop(
     columns=["score_breakdown"],
@@ -1600,16 +1673,3 @@ else:
         + " Deal value, company size and engagement remain explicitly unverified until qualified."
     )
 
-nav_a, nav_b = st.columns(2)
-with nav_a:
-    st.link_button(
-        "Open PRIORITIZE — Lead Qualification",
-        "https://lead-qualification-scorer-eambrosin.streamlit.app/",
-        use_container_width=True,
-    )
-with nav_b:
-    st.link_button(
-        "Open ENGAGE — Adaptive Outreach",
-        "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
-        use_container_width=True,
-    )
