@@ -573,6 +573,45 @@ if not held_back.empty:
             },
         )
 
+if "qualification_readiness_status" in ranked.columns:
+    st.subheader("Qualification Readiness")
+    q1, q2, q3, q4 = st.columns(4)
+    q1.metric(
+        "Ready for Qualification",
+        int(
+            (
+                ranked["qualification_readiness_status"]
+                == "Ready for Qualification"
+            ).sum()
+        ),
+    )
+    q2.metric(
+        "Enrich First",
+        int(
+            (
+                ranked["qualification_readiness_status"]
+                == "Enrich Before Qualification"
+            ).sum()
+        ),
+    )
+    q3.metric(
+        "Research Required",
+        int(
+            (
+                ranked["qualification_readiness_status"]
+                == "Research Required"
+            ).sum()
+        ),
+    )
+    q4.metric(
+        "Average Research Readiness",
+        f"{ranked['qualification_readiness_score'].mean():.0f}/100",
+    )
+    st.caption(
+        "Qualification Readiness measures evidence completeness only. "
+        "It is separate from Account Opportunity and does not predict a sale."
+    )
+
 if territory_mode and territory and "account_opportunity_score" in ranked.columns:
     st.subheader("Territory Command Center")
     territory_metrics = territory_summary(ranked, territory)
@@ -888,6 +927,21 @@ if selected.get("professional_setting"):
     st.markdown(f"**Professional setting:** {selected['professional_setting']}")
 if selected.get("commercial_track"):
     st.markdown(f"**Commercial track:** {selected['commercial_track']}")
+
+if selected.get("qualification_readiness_status"):
+    st.markdown(
+        f"**Qualification readiness:** "
+        f"{selected['qualification_readiness_status']} "
+        f"({safe_number(selected.get('qualification_readiness_score', 0)):.0f}/100)"
+    )
+    readiness_evidence = safe_text(
+        selected.get("qualification_readiness_evidence", "")
+    )
+    if readiness_evidence:
+        st.caption(
+            f"Readiness evidence: {readiness_evidence}. "
+            "This measures research completeness, not likelihood of sale."
+        )
 
 if territory_mode and "territory_location_basis" in selected.index:
     st.markdown(
