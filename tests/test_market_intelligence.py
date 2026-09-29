@@ -117,6 +117,24 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertEqual(name, "Dottorrossi")
 
+    def test_person_name_is_preserved_on_clinic_homepage(self):
+        name = _company_from_title(
+            "Michele Buratto",
+            "poliambulatorisangaetano.it",
+            "",
+            "https://poliambulatorisangaetano.it",
+        )
+        self.assertEqual(name, "Michele Buratto")
+
+    def test_person_name_is_preserved_on_generic_practice_domain(self):
+        name = _company_from_title(
+            "Vitale Minopoli",
+            "chirurgiaplastica-brescia.it",
+            "",
+            "https://chirurgiaplastica-brescia.it",
+        )
+        self.assertEqual(name, "Vitale Minopoli")
+
     def test_root_service_title_prefers_domain_brand(self):
         name = _company_from_title(
             "Soft Surgery Clinic, clinica di medicina estetica a Vicenza",
