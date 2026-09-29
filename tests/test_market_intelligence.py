@@ -5,7 +5,7 @@ import pandas as pd
 from contact_discovery import _parse_person_title, score_contact_result
 from discovery_engine import TargetProfile, build_search_queries, qualification_handoff, screen_candidates
 from presets import get_preset
-from web_discovery import _account_identity, _company_from_title
+from web_discovery import _account_identity, _company_from_title, consolidate_company_results
 
 
 class MarketIntelligenceTests(unittest.TestCase):
@@ -205,6 +205,39 @@ class MarketIntelligenceTests(unittest.TestCase):
             ranked.iloc[0]["score_breakdown"]["industry_fit"],
             100.0,
         )
+
+    def test_same_domain_pages_are_consolidated_into_one_account(self):
+        rows = [
+            {
+                "company_name": "Medical Art",
+                "source_title": "Medical Art",
+                "source_snippet": "Medicina estetica a Vicenza.",
+                "source_url": "https://www.medicalart.it/",
+                "source_domain": "medicalart.it",
+                "discovery_query": "medical art vicenza",
+                "account_identity_score": 90,
+                "qualification_ready": True,
+            },
+            {
+                "company_name": "Laser",
+                "source_title": "Laser | Medical Art",
+                "source_snippet": "Trattamenti laser estetici.",
+                "source_url": "https://www.medicalart.it/laser",
+                "source_domain": "medicalart.it",
+                "discovery_query": "laser estetico vicenza",
+                "account_identity_score": 70,
+                "qualification_ready": True,
+            },
+        ]
+
+        consolidated = consolidate_company_results(rows)
+
+        self.assertEqual(len(consolidated), 1)
+        row = consolidated.iloc[0]
+        self.assertEqual(row["company_name"], "Medical Art")
+        self.assertEqual(row["domain_evidence_count"], 2)
+        self.assertIn("medicalart.it/laser", row["supporting_source_urls"])
+        self.assertIn("Trattamenti laser estetici", row["source_snippet"])
 
 
 if __name__ == "__main__":
