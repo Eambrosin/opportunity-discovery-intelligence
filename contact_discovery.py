@@ -182,11 +182,15 @@ def discover_linkedin_contacts(
     api_key: str,
     max_results: int = 8,
     timeout: int = 30,
+    location_context: str = "",
 ) -> pd.DataFrame:
     if not api_key:
         raise ValueError("A Tavily API key is required for LinkedIn contact discovery.")
 
-    queries = _role_queries(f'"{company_name}"', target_roles, country)
+    geographic_context = " ".join(
+        part for part in [location_context, country] if str(part or "").strip()
+    ).strip()
+    queries = _role_queries(f'"{company_name}"', target_roles, geographic_context)
     per_query = max(3, min(6, max_results // max(1, len(queries)) + 1))
 
     raw_results = _search_linkedin_people(
@@ -241,14 +245,27 @@ def discover_linkedin_market_professionals(
     api_key: str,
     max_results: int = 12,
     timeout: int = 30,
+    locations: list[str] | None = None,
 ) -> pd.DataFrame:
     if not api_key:
         raise ValueError("A Tavily API key is required for market-professional discovery.")
 
     context_terms = [term.strip() for term in market_terms if term.strip()]
     context = " ".join([industry] + context_terms[:3]).strip()
-    queries = _role_queries(context, target_roles, country)
-    per_query = max(4, min(8, max_results // max(1, len(queries)) + 2))
+
+    location_values = [item.strip() for item in (locations or []) if item.strip()]
+    if not location_values:
+        location_values = [country]
+
+    queries = []
+    for location in location_values[:4]:
+        location_context = " ".join(
+            part for part in [location, country] if part and part not in location
+        ).strip()
+        queries.extend(_role_queries(context, target_roles, location_context))
+
+    queries = list(dict.fromkeys(queries))[:6]
+    per_query = max(3, min(6, max_results // max(1, len(queries)) + 2))
 
     raw_results = _search_linkedin_people(
         queries=queries,
