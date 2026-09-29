@@ -16,7 +16,7 @@ from discovery_engine import (
     qualification_handoff,
     screen_candidates,
 )
-from presets import PRESETS, get_preset
+from presets import PRESETS, get_preset, profile_id_for
 from web_discovery import discover_with_tavily
 
 
@@ -185,6 +185,7 @@ with st.sidebar:
 
 profile = TargetProfile(
     industry=industry,
+    market_profile_id=profile_id_for(preset_name),
     countries=split_values(countries_text),
     regions=split_values(regions_text),
     business_models=split_values(models_text),
