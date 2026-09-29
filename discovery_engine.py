@@ -293,6 +293,131 @@ def _professional_setting_signal(evidence: str, industry: str) -> str:
     return "Professional setting unknown"
 
 
+def _medical_aesthetics_entity_classification(
+    row: pd.Series,
+    evidence: str,
+    profile: TargetProfile,
+) -> dict:
+    if profile.market_profile_id != "medical_aesthetics":
+        identity_ready = row.get("qualification_ready", True)
+        return {
+            "commercial_track": "Target Account",
+            "target_account_ready": bool(identity_ready),
+            "target_account_reason": "Generic market account workflow",
+        }
+
+    identity_raw = row.get("qualification_ready", True)
+    if isinstance(identity_raw, bool):
+        identity_ready = identity_raw
+    else:
+        identity_ready = str(identity_raw).strip().lower() in {"true", "1", "yes"}
+
+    identity_status = _norm(row.get("account_identity_status"))
+    normalized = _norm(evidence)
+
+    if not identity_ready or any(
+        token in identity_status
+        for token in ["directory marketplace", "content document", "account identity unclear"]
+    ):
+        return {
+            "commercial_track": "Held-back Research Result",
+            "target_account_ready": False,
+            "target_account_reason": "Account identity is not strong enough for qualification",
+        }
+
+    practitioner_terms = [
+        "dott.",
+        "dott ",
+        "dottore",
+        "dottoressa",
+        "dr.",
+        "medico estetico",
+        "aesthetic physician",
+        "dermatologo",
+        "dermatologist",
+        "chirurgo plastico",
+        "plastic surgeon",
+    ]
+    provider_terms = [
+        "clinica",
+        "clinic",
+        "centro medico",
+        "medical center",
+        "studio medico",
+        "medical practice",
+        "poliambulator",
+        "medicina estetica",
+        "dermatologia estetica",
+        "chirurgia plastica",
+        "medical spa",
+        "med spa",
+    ]
+    aesthetic_center_terms = [
+        "centro estetico",
+        "beauty clinic",
+        "istituto di bellezza",
+        "estetica avanzata",
+        "esthetician",
+        "estetista",
+    ]
+    supplier_terms = [
+        "manufacturer",
+        "produttore",
+        "distributore",
+        "distributor",
+        "medical device",
+        "dispositivo medico",
+        "apparecchiature",
+        "elettromedicale",
+        "tecnologie medicali",
+        "aesthetic technology",
+        "laser manufacturer",
+        "made in italy",
+        "brevetti",
+        "academy",
+        "formazione per medici",
+    ]
+
+    practitioner = any(term in normalized for term in practitioner_terms)
+    provider = any(term in normalized for term in provider_terms)
+    aesthetic_center = any(term in normalized for term in aesthetic_center_terms)
+    supplier = any(term in normalized for term in supplier_terms)
+
+    if supplier and not (practitioner or provider or aesthetic_center):
+        return {
+            "commercial_track": "Partner / Vendor Candidate",
+            "target_account_ready": False,
+            "target_account_reason": "Looks more like a supplier, manufacturer or partner than a clinic/practice account",
+        }
+
+    if practitioner:
+        return {
+            "commercial_track": "Practitioner Target",
+            "target_account_ready": True,
+            "target_account_reason": "Relevant medical-aesthetics practitioner signal observed",
+        }
+
+    if provider:
+        return {
+            "commercial_track": "Clinic / Medical Practice Target",
+            "target_account_ready": True,
+            "target_account_reason": "Relevant clinic or medical-practice signal observed",
+        }
+
+    if aesthetic_center:
+        return {
+            "commercial_track": "Aesthetic Center — Eligibility Validation",
+            "target_account_ready": True,
+            "target_account_reason": "Relevant aesthetic-center signal observed; device eligibility requires validation",
+        }
+
+    return {
+        "commercial_track": "Held-back Research Result",
+        "target_account_ready": False,
+        "target_account_reason": "No sufficiently clear clinic, practitioner or aesthetic-center signal",
+    }
+
+
 def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
     evidence = " ".join(
         [
@@ -319,6 +444,27 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
     industry_score, industry_matches = _match_score(
         industry_source, [profile.industry] if profile.industry else []
     )
+
+    if profile.market_profile_id == "medical_aesthetics":
+        industry_evidence_terms = [
+            "medicina estetica",
+            "medico estetico",
+            "aesthetic medicine",
+            "aesthetic physician",
+            "dermatologia estetica",
+            "chirurgia plastica",
+            "plastic surgery",
+        ]
+        observed_industry_terms = [
+            term
+            for term in industry_evidence_terms
+            if term in _norm(industry_source)
+        ]
+        if observed_industry_terms:
+            industry_score = 100.0
+            industry_matches = list(
+                dict.fromkeys(industry_matches + observed_industry_terms)
+            )
 
     geo_source = " ".join([
         _text(row.get("country")),
@@ -411,6 +557,12 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
     if pd.isna(row.get("company_size")):
         unknowns.append("company size")
 
+    entity_classification = _medical_aesthetics_entity_classification(
+        row,
+        evidence,
+        profile,
+    )
+
     return {
         "discovery_score": discovery_score,
         "confidence_score": confidence_score,
@@ -423,6 +575,9 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
         "excluded_matches": ", ".join(excluded_matches),
         "unknowns_to_validate": ", ".join(unknowns),
         "professional_setting": _professional_setting_signal(evidence, profile.industry),
+        "commercial_track": entity_classification["commercial_track"],
+        "target_account_ready": entity_classification["target_account_ready"],
+        "target_account_reason": entity_classification["target_account_reason"],
         "score_breakdown": component_scores,
     }
 
