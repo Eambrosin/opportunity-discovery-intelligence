@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from account_enrichment import enrich_account
+from account_enrichment import assess_qualification_readiness, enrich_account
 from ai_insights import generate_evidence_aware_brief
 from contact_discovery import discover_linkedin_contacts, discover_linkedin_market_professionals
 from discovery_engine import (
@@ -459,6 +459,17 @@ if run:
         st.error(f"Discovery failed: {exc}")
 
 raw_ranked = st.session_state.ranked_candidates
+
+if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
+    readiness_rows = raw_ranked.apply(
+        lambda row: pd.Series(
+            assess_qualification_readiness(row.to_dict())
+        ),
+        axis=1,
+    )
+    for readiness_column in readiness_rows.columns:
+        raw_ranked[readiness_column] = readiness_rows[readiness_column]
+    st.session_state.ranked_candidates = raw_ranked
 
 if raw_ranked.empty:
     st.info(
