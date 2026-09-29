@@ -82,7 +82,7 @@ def _company_tokens(company_name: str) -> list[str]:
         for token in tokens
         if len(token) >= 3 and token not in GENERIC_COMPANY_TOKENS
     ]
-    return meaningful or [token for token in tokens if len(token) >= 3]
+    return meaningful
 
 
 def _token_match_ratio(company_name: str, evidence: str) -> float:
@@ -229,6 +229,18 @@ def score_account_web_result(
     if current_domain and domain == current_domain:
         score += 30
         reasons.append("matches discovery source domain")
+
+        identity_score = 0.0
+        try:
+            identity_score = float(
+                account.get("account_identity_score", 0) or 0
+            )
+        except Exception:
+            identity_score = 0.0
+
+        if identity_score >= 70:
+            score += 20
+            reasons.append("upstream account identity supports direct-domain match")
 
     if location_match:
         score += 10
