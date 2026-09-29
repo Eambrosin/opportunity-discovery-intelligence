@@ -92,8 +92,8 @@ class SalesIntelligenceTests(unittest.TestCase):
             vendor_profile=DELEO_NORTH_ITALY,
         )
         self.assertIn(
-            "Installed",
-            result["qualification_questions"],
+            "installed",
+            result["qualification_questions"].lower(),
         )
         self.assertIn(
             "No purchase intent is inferred",
