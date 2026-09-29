@@ -167,10 +167,12 @@ def _title_parts(title: str) -> list[str]:
     return [part.strip() for part in parts if 2 <= len(part.strip()) <= 90]
 
 
-def _company_from_title(title: str, domain: str) -> str:
+def _company_from_title(title: str, domain: str, snippet: str = "") -> str:
     parts = _title_parts(title)
 
-    person_name = _person_name_from_text(title)
+    person_name = _person_name_from_text(
+        " ".join([str(title or ""), str(snippet or "")])
+    )
     if person_name:
         return person_name
 
@@ -455,7 +457,11 @@ def discover_with_tavily(
                 continue
 
             title = result.get("title", "")
-            company_name = _company_from_title(title, domain)
+            company_name = _company_from_title(
+                title,
+                domain,
+                result.get("content", ""),
+            )
             identity = _account_identity(
                 title=title,
                 url=url,
