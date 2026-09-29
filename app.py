@@ -1455,23 +1455,53 @@ if territory_mode and territory:
 handoff = qualification_handoff(top, profile=profile)
 if handoff.empty:
     st.warning(
-        "No qualification-ready accounts are available yet. "
-        "The current discovery results require account-identity validation first."
+        "No target accounts are available for qualification handoff yet. "
+        "The current discovery results require additional account-identity validation."
     )
 else:
     excluded_from_handoff = max(len(top) - len(handoff), 0)
+
+    if "qualification_readiness_status" in handoff.columns:
+        qualification_ready_handoff = handoff[
+            handoff["qualification_readiness_status"]
+            .fillna("")
+            .astype(str)
+            .eq("Ready for Qualification")
+        ].copy()
+    else:
+        qualification_ready_handoff = pd.DataFrame()
+
     st.download_button(
         "Download Qualification Handoff",
         handoff.to_csv(index=False),
         file_name="qualification_handoff.csv",
         mime="text/csv",
+        help=(
+            "Exports all target-account candidates that passed account-identity screening. "
+            "Use Qualification Readiness to decide which should be worked first."
+        ),
     )
+
+    if not qualification_ready_handoff.empty:
+        st.download_button(
+            "Download Qualification-Ready Only",
+            qualification_ready_handoff.to_csv(index=False),
+            file_name="qualification_ready_handoff.csv",
+            mime="text/csv",
+            help=(
+                "Exports only accounts with sufficient research completeness "
+                "for the next qualification stage."
+            ),
+        )
+
+    readiness_count = len(qualification_ready_handoff)
     st.caption(
-        f"{len(handoff)} qualification-ready accounts exported"
+        f"{len(handoff)} target-account candidates available for PRIORITIZE; "
+        f"{readiness_count} currently meet the research-readiness threshold."
         + (
-            f"; {excluded_from_handoff} content/document or ambiguous results were held back."
+            f" {excluded_from_handoff} content/document or ambiguous results were held back."
             if excluded_from_handoff
-            else "."
+            else ""
         )
         + " Deal value, company size and engagement remain explicitly unverified until qualified."
     )
