@@ -455,14 +455,29 @@ def territory_summary(
             "accounts": 0,
             "high_opportunity": 0,
             "mapped_location": 0,
+            "source_observed_location": 0,
+            "scope_inferred_location": 0,
             "research_coverage": 0.0,
             "eligibility_validation": 0,
         }
 
     accounts = len(ranked)
-    mapped = int(
-        (pd.to_numeric(ranked.get("territory_location_confidence", 0), errors="coerce").fillna(0) >= 50).sum()
+    basis = (
+        ranked.get(
+            "territory_location_basis",
+            pd.Series([""] * accounts),
+        )
+        .fillna("")
+        .astype(str)
     )
+    source_observed = int(
+        basis.str.startswith("Source-observed").sum()
+    )
+    scope_inferred = int(
+        basis.str.startswith("Search-scope inferred").sum()
+    )
+    mapped = source_observed + scope_inferred
+
     high_opportunity = int(
         (pd.to_numeric(ranked.get("account_opportunity_score", 0), errors="coerce").fillna(0) >= 80).sum()
     )
@@ -474,7 +489,9 @@ def territory_summary(
         "accounts": accounts,
         "high_opportunity": high_opportunity,
         "mapped_location": mapped,
-        "research_coverage": round((mapped / accounts) * 100, 1) if accounts else 0.0,
+        "source_observed_location": source_observed,
+        "scope_inferred_location": scope_inferred,
+        "research_coverage": round((source_observed / accounts) * 100, 1) if accounts else 0.0,
         "eligibility_validation": eligibility,
     }
 
