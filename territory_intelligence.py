@@ -342,13 +342,27 @@ def apply_territory_intelligence(
             45.0 + (technology["technology_signal_count"] * 18.0),
         )
 
-        account_score = round(
-            (discovery_score * 0.60)
-            + (location_confidence * 0.15)
-            + (setting_score * 0.15)
-            + (technology_score * 0.10),
+        account_breakdown = {
+            "discovery_fit": round(discovery_score * 0.60, 1),
+            "territory_location_evidence": round(location_confidence * 0.15, 1),
+            "professional_setting": round(setting_score * 0.15, 1),
+            "technology_treatment_evidence": round(technology_score * 0.10, 1),
+        }
+        account_score = round(sum(account_breakdown.values()), 1)
+
+        identity_score = float(row.get("account_identity_score", 0) or 0)
+        account_confidence_score = round(
+            (confidence_score * 0.50)
+            + (location_confidence * 0.30)
+            + (identity_score * 0.20),
             1,
         )
+        if account_confidence_score >= 75:
+            account_confidence = "High"
+        elif account_confidence_score >= 50:
+            account_confidence = "Medium"
+        else:
+            account_confidence = "Low"
 
         enriched.update(location)
         enriched.update(technology)
@@ -359,6 +373,9 @@ def apply_territory_intelligence(
             else ""
         )
         enriched["account_opportunity_score"] = account_score
+        enriched["account_opportunity_breakdown"] = account_breakdown
+        enriched["account_evidence_confidence_score"] = account_confidence_score
+        enriched["account_evidence_confidence"] = account_confidence
         enriched["territory_status"] = _territory_status(
             account_score,
             confidence_score,
@@ -517,8 +534,25 @@ def territory_breakdown(
                 "accounts": len(group),
                 "high_opportunity": int((group["account_opportunity_score"] >= 80).sum()),
                 "average_opportunity_score": round(group["account_opportunity_score"].mean(), 1),
-                "high_confidence": int((group["confidence"] == "High").sum()),
-                "decision_maker_research_needed": int((group["territory_status"] == "Find Decision Maker").sum()),
+                "high_confidence": int(
+                    (
+                        group.get(
+                            "account_evidence_confidence",
+                            group["confidence"],
+                        )
+                        == "High"
+                    ).sum()
+                ),
+                "decision_maker_research_needed": int(
+                    (
+                        ~group.get(
+                            "decision_maker_verified",
+                            pd.Series([False] * len(group), index=group.index),
+                        )
+                        .fillna(False)
+                        .astype(bool)
+                    ).sum()
+                ),
             }
         )
 
