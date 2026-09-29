@@ -43,6 +43,11 @@ CONTENT_TITLE_PATTERNS = [
     r"^laser$",
     r"^news$",
     r"^blog$",
+    r"^archivio eventi",
+    r"^eventi$",
+    r"^dermatology in ",
+    r"^dermatologists? in ",
+    r"^aesthetic clinics? in ",
 ]
 
 ORGANIZATION_SIGNALS = [
@@ -99,21 +104,35 @@ def _title_parts(title: str) -> list[str]:
 def _company_from_title(title: str, domain: str) -> str:
     parts = _title_parts(title)
 
-    # Prefer a title segment that looks like an organization rather than
-    # a treatment page, congress programme, job page or PDF title.
-    organization_parts = [
-        part
-        for part in parts
-        if not _looks_like_content_title(part)
-        and any(signal in part.lower() for signal in ORGANIZATION_SIGNALS)
-    ]
-    if organization_parts:
-        return organization_parts[0]
-
     non_content_parts = [
         part for part in parts
         if not _looks_like_content_title(part)
     ]
+    organization_parts = [
+        part
+        for part in non_content_parts
+        if any(signal in part.lower() for signal in ORGANIZATION_SIGNALS)
+    ]
+
+    # Generic service labels such as "Chirurgia Plastica e Medicina Estetica"
+    # should not outrank a practitioner/brand name present in the same title.
+    distinctive_parts = [
+        part
+        for part in non_content_parts
+        if _name_distinctiveness(part) > 0
+    ]
+    distinctive_org_parts = [
+        part
+        for part in organization_parts
+        if _name_distinctiveness(part) > 0
+    ]
+
+    if distinctive_org_parts:
+        return max(distinctive_org_parts, key=_name_distinctiveness)
+    if distinctive_parts:
+        return max(distinctive_parts, key=_name_distinctiveness)
+    if organization_parts:
+        return organization_parts[0]
     if non_content_parts:
         return non_content_parts[-1] if len(non_content_parts) > 1 else non_content_parts[0]
 
@@ -153,6 +172,10 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
 
     company_text = str(company_name or "").lower()
     org_signal = any(signal in company_text for signal in ORGANIZATION_SIGNALS)
+    generic_account_label = (
+        bool(company_name)
+        and _name_distinctiveness(company_name) == 0
+    )
 
     if directory_like:
         score = 20
@@ -163,6 +186,9 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
     elif document_like:
         score = 45
         status = "Content page — account name inferred"
+    elif generic_account_label:
+        score = 45
+        status = "Generic service label — direct account identity not established"
     elif org_signal:
         score = 90
         status = "Likely organization"
