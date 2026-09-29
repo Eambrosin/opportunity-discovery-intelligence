@@ -24,6 +24,7 @@ from territory_intelligence import (
     territory_breakdown,
     territory_gaps,
     territory_summary,
+    technology_landscape,
 )
 from territory_profiles import (
     TERRITORIES,
@@ -289,7 +290,7 @@ with st.sidebar:
 
         query_budget = st.slider(
             "Search breadth (queries)",
-            min_value=4,
+            min_value=(1 if territory_mode and territory else 4),
             max_value=max_query_budget,
             value=min(default_queries, max_query_budget),
             help=(
@@ -325,6 +326,9 @@ profile = TargetProfile(
 if "ranked_candidates" not in st.session_state:
     st.session_state.ranked_candidates = pd.DataFrame()
 
+if "searched_cluster_ids" not in st.session_state:
+    st.session_state.searched_cluster_ids = []
+
 if run:
     try:
         if source_mode == "Sample dataset":
@@ -347,8 +351,10 @@ if run:
                     cluster_ids=selected_cluster_ids,
                     max_queries=query_budget,
                 )
+                st.session_state.searched_cluster_ids = selected_cluster_ids[: len(queries)]
             else:
                 queries = build_search_queries(profile, max_queries=query_budget)
+                st.session_state.searched_cluster_ids = []
 
             if not queries:
                 st.warning("Define at least an industry, market or customer type.")
@@ -373,6 +379,9 @@ if run:
             )
 
         ranked_result = screen_candidates(source_df, profile)
+
+        if territory_mode and territory and source_mode != "Public web (Tavily)":
+            st.session_state.searched_cluster_ids = list(selected_cluster_ids)
 
         if territory_mode and territory:
             ranked_result = apply_territory_intelligence(
@@ -457,6 +466,7 @@ if territory_mode and territory and "account_opportunity_score" in ranked.column
             ranked=ranked,
             territory=territory,
             cluster_ids=selected_cluster_ids,
+            searched_cluster_ids=st.session_state.get("searched_cluster_ids", []),
         )
         if not gaps.empty:
             with st.expander("Territory coverage & research gaps", expanded=False):
@@ -491,6 +501,9 @@ st.dataframe(
     ranked[[column for column in display_columns if column in ranked.columns]],
     use_container_width=True,
     hide_index=True,
+    column_config={
+        "source_url": st.column_config.LinkColumn("Source"),
+    },
 )
 
 chart_df = top.head(15)
@@ -577,6 +590,19 @@ if territory_mode and "territory_location_basis" in selected.index:
             f"**Commercial validation:** "
             f"{selected['technology_validation_questions']}"
         )
+
+    if vendor_profile:
+        landscape = technology_landscape(selected, vendor_profile)
+        if not landscape.empty:
+            st.markdown("**Technology landscape — evidence view**")
+            st.dataframe(
+                landscape,
+                use_container_width=True,
+                hide_index=True,
+            )
+            st.caption(
+                "Not observed means not present in the current evidence set — it does not mean the clinic does not offer that technology."
+            )
 
 if selected.get("source_url"):
     st.markdown(f"**Evidence:** {selected['source_url']}")
