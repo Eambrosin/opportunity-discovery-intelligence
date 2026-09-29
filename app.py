@@ -687,6 +687,8 @@ display_columns = [
     "market_country",
     "market_industry",
     "account_type",
+    "qualification_readiness_status",
+    "qualification_readiness_score",
     "enrichment_status",
     "account_data_completeness",
     "company_size",
@@ -778,7 +780,32 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
         progress = st.progress(0)
         status_box = st.empty()
 
-        batch_accounts = ranked.head(batch_count).copy()
+        batch_accounts = ranked.copy()
+        opportunity_column = (
+            "account_opportunity_score"
+            if "account_opportunity_score" in batch_accounts.columns
+            else "discovery_score"
+        )
+
+        if "qualification_readiness_score" in batch_accounts.columns:
+            batch_accounts = batch_accounts.sort_values(
+                [opportunity_column, "qualification_readiness_score"],
+                ascending=[False, True],
+            )
+        else:
+            batch_accounts = batch_accounts.sort_values(
+                opportunity_column,
+                ascending=False,
+            )
+
+        if "enrichment_status" in batch_accounts.columns:
+            not_enriched = ~batch_accounts[
+                "enrichment_status"
+            ].fillna("").astype(str).eq("Enriched")
+            if not_enriched.any():
+                batch_accounts = batch_accounts[not_enriched]
+
+        batch_accounts = batch_accounts.head(batch_count).copy()
 
         for position, (_, account_row) in enumerate(
             batch_accounts.iterrows(),
