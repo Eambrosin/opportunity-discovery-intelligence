@@ -239,6 +239,39 @@ def _recommended_action(score: float, confidence: float) -> str:
     return "Low Priority"
 
 
+def _professional_setting_signal(evidence: str, industry: str) -> str:
+    if "medical aesthetic" not in _norm(industry):
+        return ""
+
+    normalized = _norm(evidence)
+    medical_terms = [
+        "medico",
+        "medical",
+        "physician",
+        "doctor",
+        "dermatolog",
+        "chirurg",
+        "clinica",
+        "clinic",
+        "direttore sanitario",
+    ]
+    aesthetic_terms = [
+        "estetista",
+        "esthetician",
+        "beautician",
+        "centro estetico",
+        "beauty clinic",
+        "medical spa",
+        "med spa",
+    ]
+
+    if any(term in normalized for term in medical_terms):
+        return "Medical-setting signal observed"
+    if any(term in normalized for term in aesthetic_terms):
+        return "Professional/device eligibility to validate"
+    return "Professional setting unknown"
+
+
 def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
     evidence = " ".join(
         [
@@ -368,6 +401,7 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
         "matched_keywords": ", ".join(keyword_matches),
         "excluded_matches": ", ".join(excluded_matches),
         "unknowns_to_validate": ", ".join(unknowns),
+        "professional_setting": _professional_setting_signal(evidence, profile.industry),
         "score_breakdown": component_scores,
     }
 
