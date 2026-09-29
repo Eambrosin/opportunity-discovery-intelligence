@@ -757,6 +757,19 @@ def qualification_handoff(
         "observed_technology_axes",
         "technology_evidence",
         "technology_validation_questions",
+        "account_website",
+        "website_evidence_status",
+        "website_match_score",
+        "public_phone",
+        "public_email",
+        "public_address",
+        "contact_channel_status",
+        "enrichment_fit_signals",
+        "account_data_completeness",
+        "enrichment_status",
+        "enrichment_source_url",
+        "enrichment_source_urls",
+        "enrichment_evidence",
     ]
     for field_name in optional_fields:
         if field_name in working.columns:
