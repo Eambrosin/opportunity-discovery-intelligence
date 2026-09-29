@@ -10,6 +10,7 @@ from territory_intelligence import (
     infer_territory_location,
     territory_breakdown,
     territory_gaps,
+    technology_landscape,
 )
 from territory_profiles import NORTH_ITALY_MEDICAL_AESTHETICS, priority_cluster_ids
 from vendor_profiles import DELEO_NORTH_ITALY
@@ -194,6 +195,51 @@ class TerritoryIntelligenceTests(unittest.TestCase):
 
         self.assertFalse(by_region.empty)
         self.assertEqual(set(gaps["cluster_id"]), {"lombardia_bergamo", "veneto_verona"})
+
+
+    def test_gap_table_distinguishes_unsearched_cluster(self):
+        ranked = pd.DataFrame(
+            [
+                {
+                    "territory_cluster_id": "lombardia_bergamo",
+                    "account_opportunity_score": 85,
+                }
+            ]
+        )
+        gaps = territory_gaps(
+            ranked,
+            self.territory,
+            ["lombardia_bergamo", "veneto_verona"],
+            searched_cluster_ids=["lombardia_bergamo"],
+        )
+        verona = gaps[gaps["cluster_id"] == "veneto_verona"].iloc[0]
+        self.assertEqual(
+            verona["research_gap"],
+            "Not searched in current run",
+        )
+
+    def test_technology_landscape_uses_not_observed_not_absent(self):
+        row = {
+            "company_name": "Example Clinic",
+            "source_title": "Medicina estetica Milano",
+            "source_snippet": "Clinica con criolipolisi e body contouring.",
+            "business_model": "Aesthetic Medicine Clinic",
+        }
+        landscape = technology_landscape(row, DELEO_NORTH_ITALY)
+        self.assertFalse(landscape.empty)
+        self.assertTrue(
+            landscape["evidence_status"]
+            .astype(str)
+            .str.contains("Not observed|Observed")
+            .all()
+        )
+        self.assertFalse(
+            landscape["evidence_status"]
+            .astype(str)
+            .str.lower()
+            .str.contains("absent")
+            .any()
+        )
 
 
 if __name__ == "__main__":
