@@ -9,7 +9,7 @@ import plotly.express as px
 import streamlit as st
 
 from ai_insights import generate_evidence_aware_brief
-from contact_discovery import discover_linkedin_contacts
+from contact_discovery import discover_linkedin_contacts, discover_linkedin_market_professionals
 from discovery_engine import (
     TargetProfile,
     build_search_queries,
@@ -390,6 +390,58 @@ else:
     else:
         st.caption(
             "Select a strong account and run contact discovery to identify likely decision makers."
+        )
+
+    st.markdown("**Market-level professional discovery**")
+    st.caption(
+        "Useful for fragmented markets where the professional can be the lead itself, "
+        "such as aesthetic physicians, dermatologists, clinic owners and estheticians."
+    )
+
+    market_professional_key = f"market_professionals::{preset_name}"
+    if st.button("Find Market Professionals on LinkedIn"):
+        try:
+            with st.spinner("Searching public professional-profile evidence across the target market..."):
+                professionals = discover_linkedin_market_professionals(
+                    industry=profile.industry,
+                    country=profile.countries[0] if profile.countries else "",
+                    target_roles=profile.target_roles,
+                    market_terms=profile.required_keywords + profile.search_archetypes,
+                    api_key=contact_tavily_key,
+                    max_results=12,
+                )
+            st.session_state[market_professional_key] = professionals
+        except Exception as exc:
+            st.error(f"Market professional discovery failed: {exc}")
+
+    professionals = st.session_state.get(market_professional_key, pd.DataFrame())
+    if isinstance(professionals, pd.DataFrame) and not professionals.empty:
+        professional_columns = [
+            "person_name",
+            "headline",
+            "professional_relevance_score",
+            "professional_confidence",
+            "matched_target_roles",
+            "matched_market_signals",
+            "suggested_outreach_angle",
+            "linkedin_url",
+            "source_snippet",
+        ]
+        st.dataframe(
+            professionals[
+                [column for column in professional_columns if column in professionals.columns]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
+            },
+        )
+        st.download_button(
+            "Download Market Professional Shortlist",
+            professionals.to_csv(index=False),
+            file_name="public_linkedin_market_professionals.csv",
+            mime="text/csv",
         )
 
 st.subheader("Optional AI Evidence Brief")
