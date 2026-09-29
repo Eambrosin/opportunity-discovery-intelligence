@@ -488,6 +488,8 @@ display_columns = [
     "recommended_action",
     "why_relevant",
     "professional_setting",
+    "account_identity_score",
+    "account_identity_status",
     "account_opportunity_score",
     "territory_status",
     "territory_region",
@@ -880,17 +882,29 @@ if territory_mode and territory:
         "search scope remains explicitly marked for verification."
     )
 
-handoff = qualification_handoff(top)
-st.download_button(
-    "Download Qualification Handoff Template",
-    handoff.to_csv(index=False),
-    file_name="qualification_handoff.csv",
-    mime="text/csv",
-)
-st.caption(
-    "The qualification handoff intentionally sets estimated deal value to 0 and engagement to cold. "
-    "Validate and enrich those fields before using it for formal opportunity qualification."
-)
+handoff = qualification_handoff(top, profile=profile)
+if handoff.empty:
+    st.warning(
+        "No qualification-ready accounts are available yet. "
+        "The current discovery results require account-identity validation first."
+    )
+else:
+    excluded_from_handoff = max(len(top) - len(handoff), 0)
+    st.download_button(
+        "Download Qualification Handoff",
+        handoff.to_csv(index=False),
+        file_name="qualification_handoff.csv",
+        mime="text/csv",
+    )
+    st.caption(
+        f"{len(handoff)} qualification-ready accounts exported"
+        + (
+            f"; {excluded_from_handoff} content/document or ambiguous results were held back."
+            if excluded_from_handoff
+            else "."
+        )
+        + " Deal value, company size and engagement remain explicitly unverified until qualified."
+    )
 
 nav_a, nav_b = st.columns(2)
 with nav_a:
