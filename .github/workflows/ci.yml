@@ -24,7 +24,7 @@ jobs:
 
       - name: Compile application modules
         run: |
-          python -m py_compile app.py discovery_engine.py web_discovery.py contact_discovery.py presets.py ai_insights.py
+          python -m py_compile app.py discovery_engine.py web_discovery.py contact_discovery.py presets.py territory_profiles.py territory_intelligence.py vendor_profiles.py ai_insights.py
 
       - name: Run discovery-engine tests
         run: |
