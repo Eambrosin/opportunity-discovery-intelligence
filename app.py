@@ -18,6 +18,7 @@ from discovery_engine import (
     screen_candidates,
 )
 from presets import PRESETS, get_preset, profile_id_for
+from sales_intelligence import build_sales_intelligence
 from territory_intelligence import (
     apply_territory_intelligence,
     build_territory_search_queries,
@@ -469,6 +470,20 @@ if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
     )
     for readiness_column in readiness_rows.columns:
         raw_ranked[readiness_column] = readiness_rows[readiness_column]
+
+    sales_rows = raw_ranked.apply(
+        lambda row: pd.Series(
+            build_sales_intelligence(
+                row.to_dict(),
+                profile=profile,
+                vendor_profile=vendor_profile,
+            )
+        ),
+        axis=1,
+    )
+    for sales_column in sales_rows.columns:
+        raw_ranked[sales_column] = sales_rows[sales_column]
+
     st.session_state.ranked_candidates = raw_ranked
 
 if raw_ranked.empty:
@@ -728,6 +743,8 @@ display_columns = [
     "account_type",
     "qualification_readiness_status",
     "qualification_readiness_score",
+    "sales_motion",
+    "buyer_access_status",
     "enrichment_status",
     "account_data_completeness",
     "company_size",
@@ -942,6 +959,83 @@ if selected.get("qualification_readiness_status"):
             f"Readiness evidence: {readiness_evidence}. "
             "This measures research completeness, not likelihood of sale."
         )
+
+sales_motion = safe_text(selected.get("sales_motion", ""))
+if sales_motion:
+    st.subheader("Sales Intelligence")
+    s1, s2 = st.columns(2)
+    s1.metric("Recommended Sales Motion", sales_motion)
+    s2.metric(
+        "Buyer Access",
+        safe_text(
+            selected.get("buyer_access_status", ""),
+            "Buyer access not established",
+        ),
+    )
+
+    commercial_hypothesis = safe_text(
+        selected.get("commercial_hypothesis", "")
+    )
+    if commercial_hypothesis:
+        st.markdown(
+            f"**Commercial hypothesis:** {commercial_hypothesis}"
+        )
+
+    commercial_angle = safe_text(
+        selected.get("commercial_angle", "")
+    )
+    if commercial_angle:
+        st.markdown(
+            f"**Evidence-based commercial angle:** {commercial_angle}"
+        )
+
+    next_best_action = safe_text(
+        selected.get("next_best_action", "")
+    )
+    if next_best_action:
+        st.markdown(
+            f"**Next best action:** {next_best_action}"
+        )
+
+    sales_gaps = safe_text(
+        selected.get("sales_evidence_gaps", "")
+    )
+    if sales_gaps:
+        st.markdown(
+            f"**Evidence gaps to close:** {sales_gaps}"
+        )
+
+    qualification_questions = safe_text(
+        selected.get("qualification_questions", "")
+    )
+    if qualification_questions:
+        questions = [
+            item.strip()
+            for item in qualification_questions.split(" | ")
+            if item.strip()
+        ]
+        with st.expander(
+            "Qualification questions",
+            expanded=False,
+        ):
+            for question in questions:
+                st.markdown(f"- {question}")
+
+    risk_flags = safe_text(
+        selected.get("commercial_risk_flags", "")
+    )
+    if risk_flags:
+        st.warning(
+            f"Validation flags: {risk_flags}"
+        )
+
+    st.caption(
+        safe_text(
+            selected.get("sales_intelligence_basis", ""),
+            "Observed public evidence + deterministic qualification logic; "
+            "no purchase intent or win probability inferred.",
+        )
+    )
 
 if territory_mode and "territory_location_basis" in selected.index:
     st.markdown(
