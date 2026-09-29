@@ -892,6 +892,108 @@ with st.expander("Explainable score"):
             "setting and observed technology/treatment evidence. It does not infer deal value."
         )
 
+st.subheader("Account Enrichment")
+st.caption(
+    "Searches public web evidence for a direct account website, public business contact "
+    "channels and additional fit signals. Enrichment is evidence-only and does not infer "
+    "deal value, buying intent or device eligibility."
+)
+
+selected_enrichment_key = f"account_enrichment::{selected_company}"
+enrichment_tavily_key = server_tavily_key or tavily_key
+
+if not enrichment_tavily_key:
+    st.info("Configure TAVILY_API_KEY to enable Account Enrichment.")
+else:
+    if st.button(
+        "Enrich Selected Account",
+        key=f"enrich_selected::{selected_company}",
+    ):
+        try:
+            with st.spinner(
+                f"Enriching public account evidence for {selected_company}..."
+            ):
+                enrichment = enrich_account(
+                    account=selected.to_dict(),
+                    api_key=enrichment_tavily_key,
+                    fit_terms=profile.required_keywords,
+                    country=(
+                        profile.countries[0]
+                        if profile.countries
+                        else "Italy"
+                    ),
+                )
+
+                update_account_in_session(
+                    company_name=selected_company,
+                    source_url=str(selected.get("source_url", "") or ""),
+                    values=enrichment,
+                )
+                st.session_state[selected_enrichment_key] = enrichment
+            st.rerun()
+        except Exception as exc:
+            st.error(f"Account enrichment failed: {exc}")
+
+enrichment_status = str(selected.get("enrichment_status", "") or "")
+if enrichment_status:
+    e1, e2, e3 = st.columns(3)
+    e1.metric(
+        "Enrichment Status",
+        enrichment_status,
+    )
+    e2.metric(
+        "Account Data Completeness",
+        f"{float(selected.get('account_data_completeness', 0) or 0):.0f}%",
+    )
+    e3.metric(
+        "Website Evidence",
+        str(selected.get("website_evidence_status", "") or "Needs verification"),
+    )
+
+    account_website = str(selected.get("account_website", "") or "")
+    if account_website:
+        st.markdown(f"**Account website:** {account_website}")
+
+    public_address = str(selected.get("public_address", "") or "")
+    if public_address:
+        st.markdown(f"**Public address:** {public_address}")
+
+    public_phone = str(selected.get("public_phone", "") or "")
+    public_email = str(selected.get("public_email", "") or "")
+    if public_phone:
+        st.markdown(f"**Public phone:** {public_phone}")
+    if public_email:
+        st.markdown(f"**Public email:** {public_email}")
+
+    st.markdown(
+        f"**Contact-channel status:** "
+        f"{selected.get('contact_channel_status', 'No public contact channel observed')}"
+    )
+
+    enrichment_fit = str(selected.get("enrichment_fit_signals", "") or "")
+    if enrichment_fit:
+        st.markdown(
+            f"**Additional public fit evidence:** {enrichment_fit}"
+        )
+
+    enrichment_source = str(
+        selected.get("enrichment_source_url", "") or ""
+    )
+    if enrichment_source:
+        st.markdown(
+            f"**Primary enrichment evidence:** {enrichment_source}"
+        )
+
+    st.caption(
+        "Public contact details can change. Verify the current website, phone, email and "
+        "address before commercial use."
+    )
+else:
+    st.caption(
+        "This account has not yet been enriched. Use the button above or the Top Accounts "
+        "batch enrichment workflow."
+    )
+
 st.subheader("Public Contact & LinkedIn Discovery")
 st.caption(
     "Finds publicly indexed LinkedIn profile snippets for the selected account. "
