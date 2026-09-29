@@ -386,6 +386,32 @@ else:
             file_name="public_linkedin_contact_shortlist.csv",
             mime="text/csv",
         )
+
+        outreach_handoff = pd.DataFrame(
+            {
+                "contact_name": contacts["person_name"],
+                "company": selected_company,
+                "country": contact_country,
+                "industry": profile.industry,
+                "deal_type": "Prospecting",
+                "deal_value_usd": 0,
+                "engagement_signal": "cold",
+                "score": float(selected["discovery_score"]),
+                "recommended_action": str(selected["recommended_action"]),
+                "score_rationale": str(selected["why_relevant"]),
+                "linkedin_url": contacts["linkedin_url"],
+                "contact_headline": contacts["headline"],
+                "outreach_angle": contacts["suggested_outreach_angle"],
+            }
+        )
+        st.download_button(
+            "Download Adaptive Outreach Handoff",
+            outreach_handoff.to_csv(index=False),
+            file_name="adaptive_outreach_handoff.csv",
+            mime="text/csv",
+            help="Compatible with the Adaptive Outreach Intelligence portfolio application.",
+        )
+
         st.caption(
             "Use profile evidence as a starting point. Verify the current role and company "
             "before outreach; public search indexes can be stale."
