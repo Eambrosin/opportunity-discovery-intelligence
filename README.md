@@ -148,6 +148,27 @@ How much evidence do we actually have?
 
 ---
 
+## Account Enrichment
+
+Discovery now includes an optional evidence-aware **Account Enrichment** layer before formal qualification.
+
+For selected or top-ranked target accounts, the app can research public evidence for:
+
+- direct account website
+- website-match confidence
+- public business phone
+- public business email
+- public address
+- additional fit signals
+- Account Data Completeness
+- enrichment source URLs and evidence snippets
+
+The workflow is intentionally selective so users can control public-search credit consumption.
+
+Enrichment does **not** infer deal value, buying intent, company size, device eligibility or current decision authority.
+
+Public contact details can change and should be verified before commercial use.
+
 ## Evidence-Aware Design
 
 The application distinguishes between:
@@ -208,7 +229,7 @@ Common aliases such as `company`, `name`, `employees`, `sector` and `website` ar
 
 Optional Tavily integration generates market-specific search queries and converts public search results into candidate accounts.
 
-The application preserves source URLs and evidence snippets, removes exact duplicates and uses controlled per-domain limits so fragmented markets can still return multiple useful clinics, practices or professionals from the same directory source.
+The application preserves source URLs and evidence snippets, removes exact duplicates and uses controlled per-domain limits. Account discovery excludes common directories, marketplaces and editorial/search pages from the main target-account workflow so research evidence does not automatically become a sales account.
 
 Account discovery intentionally avoids social-network results so company research stays evidence-focused.
 
@@ -271,7 +292,7 @@ The application exports a qualification-handoff template aligned with the downst
 
 The handoff intentionally marks discovery-stage assumptions for manual enrichment.
 
-Unknown deal value is exported as `0` and initial engagement as `cold`; these fields should be validated before formal opportunity qualification.
+Unknown deal value is exported with `deal_value_status=unknown`, while engagement remains explicitly unverified until qualification. Upstream account enrichment and public decision-maker evidence are preserved when available.
 
 The export follows the portfolio's shared Commercial Intelligence handoff contract using fields such as `schema_version`, `source_stage` and `market_profile_id`. The app also provides direct navigation to PRIORITIZE and ENGAGE.
 
@@ -311,6 +332,7 @@ opportunity-discovery-intelligence/
 ├── discovery_engine.py
 ├── web_discovery.py
 ├── contact_discovery.py
+├── account_enrichment.py
 ├── presets.py
 ├── territory_profiles.py
 ├── territory_intelligence.py
@@ -324,7 +346,10 @@ opportunity-discovery-intelligence/
 │   └── sample_company_universe.csv
 │
 └── tests/
-    └── test_discovery_engine.py
+    ├── test_discovery_engine.py
+    ├── test_market_intelligence.py
+    ├── test_territory_intelligence.py
+    └── test_account_enrichment.py
 ```
 
 ---
@@ -411,7 +436,6 @@ GitHub Actions runs syntax validation and the discovery-engine unit tests automa
 Potential next steps:
 
 - richer provider abstraction for additional search APIs
-- website enrichment
 - verified company-size enrichment
 - industry taxonomy mapping
 - richer public professional/contact discovery
