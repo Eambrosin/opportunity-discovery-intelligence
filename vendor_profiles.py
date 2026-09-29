@@ -50,6 +50,12 @@ DELEO_NORTH_ITALY = {
             "laser tatuaggi",
         ],
     },
+    "non_target_vendor_signals": [
+        "allergan aesthetics",
+        "abbvie",
+        "btx bar",
+        "deleo",
+    ],
     "support_themes": [
         "Continuous training",
         "Warranty and after-sales service",
