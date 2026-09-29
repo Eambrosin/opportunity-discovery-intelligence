@@ -419,19 +419,27 @@ if territory_mode and territory and "account_opportunity_score" in ranked.column
     st.subheader("Territory Command Center")
     territory_metrics = territory_summary(ranked, territory)
 
-    t1, t2, t3, t4, t5 = st.columns(5)
+    t1, t2, t3, t4, t5, t6 = st.columns(6)
     t1.metric("Territory Accounts", territory_metrics["accounts"])
     t2.metric("80+ Opportunity", territory_metrics["high_opportunity"])
-    t3.metric("Mapped Location", territory_metrics["mapped_location"])
+    t3.metric(
+        "Source-Verified Location",
+        territory_metrics["source_observed_location"],
+    )
     t4.metric(
-        "Research Coverage",
-        f"{territory_metrics['research_coverage']:.0f}%",
-        help=(
-            "Share of discovered candidates with usable territory mapping. "
-            "This is research-data coverage, not market share."
-        ),
+        "Scope-Inferred Location",
+        territory_metrics["scope_inferred_location"],
+        help="Mapped from the search scope and still requiring location verification.",
     )
     t5.metric(
+        "Source Coverage",
+        f"{territory_metrics['research_coverage']:.0f}%",
+        help=(
+            "Share of discovered candidates whose location is supported by source evidence. "
+            "Search-scope inference is excluded. This is not market share."
+        ),
+    )
+    t6.metric(
         "Eligibility Validation",
         territory_metrics["eligibility_validation"],
     )
@@ -562,7 +570,12 @@ else:
 
 st.markdown(f"**Why relevant:** {selected['why_relevant']}")
 st.markdown(
-    f"**Unknowns to validate:** {selected['unknowns_to_validate'] or 'None identified'}"
+    f"**Source-native fields not yet verified:** "
+    f"{selected['unknowns_to_validate'] or 'None identified'}"
+)
+st.caption(
+    "Territory and market-profile context are evaluated separately below, so a field can "
+    "be absent from the source record even when the territory layer has stronger evidence."
 )
 if selected.get("matched_keywords"):
     st.markdown(f"**Observed fit signals:** {selected['matched_keywords']}")
