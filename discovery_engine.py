@@ -780,6 +780,15 @@ def qualification_handoff(
         "qualification_readiness_score",
         "qualification_readiness_status",
         "qualification_readiness_evidence",
+        "sales_motion",
+        "buyer_access_status",
+        "commercial_hypothesis",
+        "commercial_angle",
+        "next_best_action",
+        "qualification_questions",
+        "sales_evidence_gaps",
+        "commercial_risk_flags",
+        "sales_intelligence_basis",
     ]
     for field_name in optional_fields:
         if field_name in working.columns:
