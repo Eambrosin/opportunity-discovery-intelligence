@@ -88,6 +88,23 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertEqual(name, "Medical Art")
 
+    def test_company_parser_prefers_practitioner_over_generic_service_label(self):
+        name = _company_from_title(
+            "Chirurgia Plastica e Medicina Estetica | Dott.ssa Alessandra Cecchini",
+            "alessandracecchini.it",
+        )
+        self.assertIn("Alessandra Cecchini", name)
+
+    def test_generic_service_label_is_not_direct_account_identity(self):
+        identity = _account_identity(
+            title="Clinica Medicina Estetica",
+            url="https://exampleclinic.it/medicina-estetica",
+            company_name="Clinica Medicina Estetica",
+            domain="exampleclinic.it",
+        )
+        self.assertFalse(identity["qualification_ready"])
+        self.assertIn("Generic service label", identity["account_identity_status"])
+
     def test_pdf_cv_is_not_qualification_ready(self):
         identity = _account_identity(
             title="CV VINDIGNI VINCENZO 2024",
