@@ -531,3 +531,17 @@ st.caption(
     "The qualification handoff intentionally sets estimated deal value to 0 and engagement to cold. "
     "Validate and enrich those fields before using it for formal opportunity qualification."
 )
+
+nav_a, nav_b = st.columns(2)
+with nav_a:
+    st.link_button(
+        "Open PRIORITIZE — Lead Qualification",
+        "https://lead-qualification-scorer-eambrosin.streamlit.app/",
+        use_container_width=True,
+    )
+with nav_b:
+    st.link_button(
+        "Open ENGAGE — Adaptive Outreach",
+        "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
+        use_container_width=True,
+    )
