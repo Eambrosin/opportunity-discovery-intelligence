@@ -86,6 +86,14 @@ def build_territory_search_queries(
         archetype = local_terms[index % len(local_terms)] if profile.market_profile_id == "medical_aesthetics" else archetypes[index % len(archetypes)]
         keyword = keywords[index % len(keywords)]
 
+        source_preference = ""
+        if profile.market_profile_id == "medical_aesthetics":
+            source_preference = (
+                "offizielle website"
+                if "de" in cluster.get("languages", [])
+                else "sito ufficiale"
+            )
+
         query = " ".join(
             part
             for part in [
@@ -94,6 +102,7 @@ def build_territory_search_queries(
                 location,
                 region,
                 territory.get("country", "Italy"),
+                source_preference,
             ]
             if _text(part)
         ).strip()
