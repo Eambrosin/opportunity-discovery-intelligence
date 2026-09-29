@@ -95,6 +95,20 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertIn("Alessandra Cecchini", name)
 
+    def test_generic_title_falls_back_to_distinctive_domain_brand(self):
+        name = _company_from_title(
+            "Medicina e Chirurgia Estetica e Ricostruttiva",
+            "alessandracecchini.it",
+        )
+        self.assertEqual(name, "Alessandracecchini")
+
+    def test_generic_dermatology_title_falls_back_to_domain_brand(self):
+        name = _company_from_title(
+            "Dermatologo Venereologico",
+            "dottorrossi.it",
+        )
+        self.assertEqual(name, "Dottorrossi")
+
     def test_generic_service_label_is_not_direct_account_identity(self):
         identity = _account_identity(
             title="Clinica Medicina Estetica",
