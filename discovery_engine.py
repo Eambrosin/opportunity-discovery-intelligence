@@ -19,6 +19,7 @@ DEFAULT_WEIGHTS = {
 @dataclass
 class TargetProfile:
     industry: str
+    market_profile_id: str = "custom"
     countries: list[str] = field(default_factory=list)
     regions: list[str] = field(default_factory=list)
     business_models: list[str] = field(default_factory=list)
@@ -413,6 +414,8 @@ def screen_candidates(df: pd.DataFrame, profile: TargetProfile) -> pd.DataFrame:
     for _, row in candidates.iterrows():
         result = score_candidate(row, profile)
         merged = row.to_dict()
+        merged["market_profile_id"] = profile.market_profile_id
+        merged["source_stage"] = "IDENTIFY"
         merged.update(result)
         rows.append(merged)
 
@@ -429,6 +432,8 @@ def screen_candidates(df: pd.DataFrame, profile: TargetProfile) -> pd.DataFrame:
 
 def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
     handoff = pd.DataFrame()
+    handoff["market_profile_id"] = ranked.get("market_profile_id", "")
+    handoff["source_stage"] = "IDENTIFY"
     handoff["company_name"] = ranked.get("company_name", "")
     handoff["country"] = ranked.get("country", "")
     handoff["region"] = ranked.get("region", "")
