@@ -164,6 +164,40 @@ class TerritoryIntelligenceTests(unittest.TestCase):
         self.assertGreater(row["account_opportunity_score"], 0)
         self.assertNotIn("recommend", row["technology_validation_questions"].lower())
 
+    def test_enrichment_evidence_can_add_technology_signal(self):
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Clinic Milano",
+                "country": "Italy",
+                "region": "Europe",
+                "industry": "Medical Aesthetics",
+                "business_model": "Aesthetic Medicine Clinic",
+                "source_title": "Example Clinic Milano",
+                "source_snippet": "Clinica di medicina estetica a Milano.",
+                "source_url": "https://example.com",
+                "source_domain": "example.com",
+                "discovery_query": "clinica medicina estetica Milano Lombardia Italy",
+                "qualification_ready": True,
+                "account_identity_status": "Likely organization",
+                "enrichment_evidence": (
+                    "Il centro offre criolipolisi, body contouring e laser frazionato."
+                ),
+                "enrichment_fit_signals": "criolipolisi, body contouring",
+            }]
+        )
+        ranked = screen_candidates(data, self.profile)
+        enriched = apply_territory_intelligence(
+            ranked,
+            self.territory,
+            DELEO_NORTH_ITALY,
+        )
+        row = enriched.iloc[0]
+        self.assertIn(
+            "Silhouette / Body Contouring",
+            row["observed_technology_axes"],
+        )
+        self.assertIn("criolipolisi", row["technology_evidence"].lower())
+
     def test_contact_readiness_can_mark_strong_account_ready_for_field_visit(self):
         contact = {
             "contact_relevance_score": 100,
