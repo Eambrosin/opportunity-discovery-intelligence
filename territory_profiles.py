@@ -8,6 +8,23 @@ NORTH_ITALY_MEDICAL_AESTHETICS = {
     "country": "Italy",
     "market_profile_id": "medical_aesthetics",
     "regions": ["Lombardia", "Veneto", "Trentino-Alto Adige"],
+    "out_of_scope_location_signals": [
+        "Roma", "Rome", "Lazio",
+        "Torino", "Turin", "Piemonte",
+        "Genova", "Genoa", "Liguria",
+        "Bologna", "Emilia-Romagna",
+        "Firenze", "Florence", "Toscana",
+        "Napoli", "Naples", "Campania",
+        "Bari", "Puglia",
+        "Palermo", "Catania", "Sicilia",
+        "Cagliari", "Sardegna",
+        "Udine", "Friuli", "Trieste",
+        "Columbus", "Ohio",
+        "New York", "Florida", "California", "Texas",
+        "London", "United Kingdom",
+        "Paris", "France",
+        "Madrid", "Spain",
+    ],
     "note": (
         "Commercial territory for medical-aesthetics account development. "
         "Location inference distinguishes source-observed evidence from search-scope inference."
