@@ -27,29 +27,21 @@ The scoring engine remains deterministic and explainable. AI is optional and is 
 This application is the **IDENTIFY** stage of the broader [AI Business Development Toolkit](https://github.com/Eambrosin/AI-Business-Development-Toolkit).
 
 ```text
-IDENTIFY
-Opportunity Discovery Intelligence
-← THIS APPLICATION
-
-        ↓
-
+ACCOUNT DEVELOPMENT
+IDENTIFY ← THIS APPLICATION
+   ↓
 PRIORITIZE
-Lead Qualification & Revenue Prioritization
-
-        ↓
-
+   ↓
 ENGAGE
-Adaptive Outreach Intelligence
 
-        ↓
-
+PARTNERSHIP DEVELOPMENT
+IDENTIFY / Partner Universe
+   ↓
 PARTNER
-Partnership Intelligence
+   ↓
+ENGAGE
 
-        ↓
-
-EXPAND
-Market Entry Intelligence
+Both tracks can feed EXPAND / Territory Intelligence.
 ```
 
 ---
