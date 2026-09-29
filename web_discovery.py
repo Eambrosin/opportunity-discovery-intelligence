@@ -50,6 +50,22 @@ CONTENT_TITLE_PATTERNS = [
     r"^aesthetic clinics? in ",
 ]
 
+GENERIC_SERVICE_TOKENS = {
+    "a", "al", "alla", "con", "di", "del", "della", "e", "ed", "in",
+    "clinic", "clinica", "cliniche", "medical", "medico", "medica",
+    "centro", "centri", "studio", "istituto", "poliambulatorio", "poliambulatori",
+    "medicina", "estetica", "aesthetic", "dermatologia", "dermatologo",
+    "venereologia", "venereologico", "chirurgia", "chirurgo", "plastica",
+    "plastico", "ricostruttiva", "rigenerativa", "laser", "trattamenti",
+    "trattamento", "specialista", "specialisti", "surgery", "plastic",
+    "dermatology", "medicine", "regenerative", "reconstructive",
+    "milano", "milan", "monza", "bergamo", "brescia", "como", "varese",
+    "verona", "vicenza", "padova", "padua", "treviso", "venezia", "venice",
+    "trento", "bolzano", "bozen", "roma", "rome", "italia", "italy",
+    "lugano", "moritz",
+}
+
+
 ORGANIZATION_SIGNALS = [
     "clinic",
     "clinica",
@@ -89,6 +105,56 @@ def _domain_brand(domain: str) -> str:
     return " ".join(part.capitalize() for part in stem.split()) or "Unknown Company"
 
 
+def _looks_like_generic_service_label(value: str) -> bool:
+    tokens = re.findall(
+        r"[a-z0-9à-ÿ]+",
+        str(value or "").lower(),
+    )
+    meaningful = [
+        token
+        for token in tokens
+        if len(token) >= 2 and token not in {"dr", "dott", "dottssa"}
+    ]
+    if not meaningful:
+        return True
+
+    non_generic = [
+        token
+        for token in meaningful
+        if token not in GENERIC_SERVICE_TOKENS
+    ]
+
+    # A real brand/practitioner usually contributes at least one distinctive
+    # token. Pure specialty + treatment + location labels should not become
+    # account identities.
+    return len(non_generic) == 0
+
+
+def _person_name_from_text(value: str) -> str:
+    text = " ".join(str(value or "").split())
+    match = re.search(
+        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottore|Dottoressa|Dr\.)\s+"
+        r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)",
+        text,
+    )
+    if not match:
+        return ""
+    return match.group(1).strip(" ,.;|-")
+
+
+def _clean_domain_brand(domain: str) -> str:
+    brand = _domain_brand(domain)
+    compact = re.sub(r"[^a-z0-9à-ÿ]+", "", brand.lower())
+    generic_domains = {
+        "clinic", "clinica", "medical", "medicinaestetica",
+        "centromedico", "centroestetico", "dermatologia",
+        "chirurgiaplastica", "aesthetic", "beauty", "home",
+    }
+    if not compact or compact in generic_domains:
+        return ""
+    return brand
+
+
 def _looks_like_content_title(value: str) -> bool:
     text = " ".join(str(value or "").strip().lower().split())
     if not text:
@@ -104,33 +170,32 @@ def _title_parts(title: str) -> list[str]:
 def _company_from_title(title: str, domain: str) -> str:
     parts = _title_parts(title)
 
+    person_name = _person_name_from_text(title)
+    if person_name:
+        return person_name
+
     non_content_parts = [
         part for part in parts
         if not _looks_like_content_title(part)
     ]
+
+    distinctive_parts = [
+        part
+        for part in non_content_parts
+        if not _looks_like_generic_service_label(part)
+    ]
+    if distinctive_parts:
+        return max(distinctive_parts, key=_name_distinctiveness)
+
+    domain_brand = _clean_domain_brand(domain)
+    if domain_brand:
+        return domain_brand
+
     organization_parts = [
         part
         for part in non_content_parts
         if any(signal in part.lower() for signal in ORGANIZATION_SIGNALS)
     ]
-
-    # Generic service labels such as "Chirurgia Plastica e Medicina Estetica"
-    # should not outrank a practitioner/brand name present in the same title.
-    distinctive_parts = [
-        part
-        for part in non_content_parts
-        if _name_distinctiveness(part) > 0
-    ]
-    distinctive_org_parts = [
-        part
-        for part in organization_parts
-        if _name_distinctiveness(part) > 0
-    ]
-
-    if distinctive_parts:
-        return max(distinctive_parts, key=_name_distinctiveness)
-    if distinctive_org_parts:
-        return max(distinctive_org_parts, key=_name_distinctiveness)
     if organization_parts:
         return organization_parts[0]
     if non_content_parts:
@@ -174,7 +239,7 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
     org_signal = any(signal in company_text for signal in ORGANIZATION_SIGNALS)
     generic_account_label = (
         bool(company_name)
-        and _name_distinctiveness(company_name) == 0
+        and _looks_like_generic_service_label(company_name)
     )
 
     if directory_like:
