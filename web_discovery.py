@@ -180,6 +180,148 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
     }
 
 
+def _url_depth(url: str) -> int:
+    path = urlparse(str(url or "")).path.strip("/")
+    if not path:
+        return 0
+    return len([part for part in path.split("/") if part])
+
+
+def _name_distinctiveness(company_name: str) -> int:
+    generic = {
+        "clinic",
+        "clinica",
+        "medical",
+        "medico",
+        "medica",
+        "centro",
+        "center",
+        "studio",
+        "medicina",
+        "estetica",
+        "aesthetic",
+        "dermatologia",
+        "chirurgia",
+        "italia",
+        "italy",
+        "milano",
+        "milan",
+        "verona",
+        "vicenza",
+        "padova",
+        "brescia",
+        "bergamo",
+        "venezia",
+        "trento",
+        "bolzano",
+        "varese",
+        "como",
+        "monza",
+    }
+    tokens = re.findall(
+        r"[a-z0-9à-ÿ]+",
+        str(company_name or "").lower(),
+    )
+    return sum(
+        1
+        for token in tokens
+        if len(token) >= 3 and token not in generic
+    )
+
+
+def consolidate_company_results(rows: list[dict]) -> pd.DataFrame:
+    """
+    Consolidate multiple pages from the same direct domain into one account candidate.
+
+    The discovery engine keeps supporting URLs/snippets as evidence while preventing
+    treatment pages, contact pages and homepage variants from becoming separate leads.
+    """
+    if not rows:
+        return pd.DataFrame()
+
+    frame = pd.DataFrame(rows)
+    if "source_domain" not in frame.columns:
+        return frame
+
+    consolidated = []
+
+    for _, group in frame.groupby("source_domain", dropna=False, sort=False):
+        working = group.copy()
+        working["_ready_rank"] = (
+            working.get("qualification_ready", False)
+            .fillna(False)
+            .astype(bool)
+            .astype(int)
+        )
+        working["_identity_rank"] = pd.to_numeric(
+            working.get("account_identity_score", 0),
+            errors="coerce",
+        ).fillna(0)
+        working["_url_depth"] = working["source_url"].map(_url_depth)
+        working["_name_distinctiveness"] = working["company_name"].map(
+            _name_distinctiveness
+        )
+
+        working = working.sort_values(
+            [
+                "_ready_rank",
+                "_identity_rank",
+                "_url_depth",
+                "_name_distinctiveness",
+            ],
+            ascending=[False, False, True, False],
+        )
+
+        base = working.iloc[0].to_dict()
+
+        supporting_urls = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in group["source_url"].tolist()
+                if str(value).strip()
+            )
+        )
+        snippets = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in group["source_snippet"].tolist()
+                if str(value).strip()
+            )
+        )
+        titles = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in group["source_title"].tolist()
+                if str(value).strip()
+            )
+        )
+        queries = list(
+            dict.fromkeys(
+                str(value).strip()
+                for value in group["discovery_query"].tolist()
+                if str(value).strip()
+            )
+        )
+
+        base["source_snippet"] = " | ".join(snippets[:3])[:3500]
+        base["supporting_source_urls"] = " | ".join(supporting_urls)
+        base["supporting_source_titles"] = " | ".join(titles[:5])
+        base["supporting_discovery_queries"] = " | ".join(queries[:5])
+        base["domain_evidence_count"] = int(len(group))
+
+        for internal in [
+            "_ready_rank",
+            "_identity_rank",
+            "_url_depth",
+            "_name_distinctiveness",
+        ]:
+            base.pop(internal, None)
+
+        consolidated.append(base)
+
+    return pd.DataFrame(consolidated)
+
+
 def discover_with_tavily(
     queries: list[str],
     api_key: str,
@@ -259,4 +401,4 @@ def discover_with_tavily(
                 }
             )
 
-    return pd.DataFrame(rows)
+    return consolidate_company_results(rows)
