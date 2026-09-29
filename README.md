@@ -169,6 +169,42 @@ Enrichment does **not** infer deal value, buying intent, company size, device el
 
 Public contact details can change and should be verified before commercial use.
 
+## Qualification Readiness
+
+The discovery workflow now keeps **Account Opportunity** separate from **Qualification Readiness**.
+
+```text
+Account Opportunity
+How attractive does the account look?
+
+Qualification Readiness
+How much decision-useful evidence do we have before formal qualification?
+```
+
+Qualification Readiness can use evidence such as:
+
+- account identity confidence
+- source-observed territory location
+- verified or probable direct website
+- public business phone or email
+- professional-setting evidence
+- technology / treatment evidence
+- public decision-maker candidate evidence
+
+Statuses:
+
+```text
+Ready for Qualification
+Enrich Before Qualification
+Research Required
+```
+
+This score is **not** a probability of sale and does not change deal value or buying intent.
+
+The app can export either the full target-account handoff or a **Qualification-Ready Only** subset.
+
+---
+
 ## Evidence-Aware Design
 
 The application distinguishes between:
