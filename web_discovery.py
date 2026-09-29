@@ -20,6 +20,18 @@ ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
     "tripadvisor.com",
     "whatclinic.com",
     "ambienteeuropa.info",
+    "yumpu.com",
+    "larena.it",
+    "sitri.it",
+    "infodent.it",
+    "skinchannel.it",
+    "enpam.it",
+    "unipd.it",
+    "webmd.com",
+    "groupon.it",
+    "geoprogress.eu",
+    "reumaticitrentini.it",
+    "unimib.it",
 ]
 
 CONTENT_TITLE_PATTERNS = [
@@ -48,6 +60,10 @@ CONTENT_TITLE_PATTERNS = [
     r"^dermatology in ",
     r"^dermatologists? in ",
     r"^aesthetic clinics? in ",
+    r"^home$",
+    r"^download\b",
+    r"^trova il\b",
+    r"^trova la\b",
 ]
 
 GENERIC_SERVICE_TOKENS = {
@@ -102,6 +118,34 @@ def _domain_brand(domain: str) -> str:
 
     stem = domain.split(".")[0]
     stem = re.sub(r"[-_]+", " ", stem).strip()
+
+    if " " not in stem:
+        lower = stem.lower()
+        if len(lower) <= 5 and lower.isalpha():
+            return lower.upper()
+
+        suffixes = [
+            ("regenerative", " Regenerative"),
+            ("dermatologo", " Dermatologo"),
+            ("dermatology", " Dermatology"),
+            ("partners", " Partners"),
+            ("aesthetics", " Aesthetics"),
+            ("aesthetic", " Aesthetic"),
+            ("estetica", " Estetica"),
+            ("medical", " Medical"),
+            ("clinic", " Clinic"),
+            ("italia", " Italia"),
+            ("beauty", " Beauty"),
+            ("care", " Care"),
+            ("group", " Group"),
+            ("art", " Art"),
+        ]
+        for suffix, rendered in suffixes:
+            if lower.endswith(suffix) and len(lower) > len(suffix):
+                prefix = lower[:-len(suffix)].strip()
+                if prefix:
+                    return prefix.capitalize() + rendered
+
     return " ".join(part.capitalize() for part in stem.split()) or "Unknown Company"
 
 
@@ -133,7 +177,7 @@ def _looks_like_generic_service_label(value: str) -> bool:
 def _person_name_from_text(value: str) -> str:
     text = " ".join(str(value or "").split())
     match = re.search(
-        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottore|Dottoressa|Dr\.)\s+"
+        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottor\.?|Dottore|Dottoressa|Dr\.?|Prof\.?)\s+"
         r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)",
         text,
     )
@@ -167,7 +211,24 @@ def _title_parts(title: str) -> list[str]:
     return [part.strip() for part in parts if 2 <= len(part.strip()) <= 90]
 
 
-def _company_from_title(title: str, domain: str, snippet: str = "") -> str:
+def _compact_identity(value: str) -> str:
+    return re.sub(r"[^a-z0-9à-ÿ]+", "", str(value or "").lower())
+
+
+def _title_matches_domain_brand(title: str, domain: str) -> bool:
+    stem = _compact_identity(domain.split(".")[0] if domain else "")
+    title_compact = _compact_identity(title)
+    if not stem or not title_compact:
+        return False
+    return stem in title_compact or title_compact in stem
+
+
+def _company_from_title(
+    title: str,
+    domain: str,
+    snippet: str = "",
+    url: str = "",
+) -> str:
     parts = _title_parts(title)
 
     person_name = _person_name_from_text(
@@ -181,15 +242,33 @@ def _company_from_title(title: str, domain: str, snippet: str = "") -> str:
         if not _looks_like_content_title(part)
     ]
 
+    domain_brand = _clean_domain_brand(domain)
+    root_like = _url_depth(url) == 0 if url else False
+
+    # On a homepage, a title that does not resemble the domain brand is often a
+    # marketing slogan or service descriptor. Prefer the stable domain identity.
+    if (
+        root_like
+        and domain_brand
+        and not any(_title_matches_domain_brand(part, domain) for part in non_content_parts)
+    ):
+        return domain_brand
+
     distinctive_parts = [
         part
         for part in non_content_parts
         if not _looks_like_generic_service_label(part)
     ]
     if distinctive_parts:
+        brand_aligned = [
+            part
+            for part in distinctive_parts
+            if _title_matches_domain_brand(part, domain)
+        ]
+        if brand_aligned:
+            return max(brand_aligned, key=_name_distinctiveness)
         return max(distinctive_parts, key=_name_distinctiveness)
 
-    domain_brand = _clean_domain_brand(domain)
     if domain_brand:
         return domain_brand
 
@@ -461,6 +540,7 @@ def discover_with_tavily(
                 title,
                 domain,
                 result.get("content", ""),
+                url,
             )
             identity = _account_identity(
                 title=title,
