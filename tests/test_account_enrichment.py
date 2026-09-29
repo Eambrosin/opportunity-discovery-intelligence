@@ -77,6 +77,20 @@ class AccountEnrichmentTests(unittest.TestCase):
         self.assertTrue(any('"Example Clinic"' in query for query in queries))
         self.assertTrue(any("Bergamo" in query for query in queries))
 
+    def test_generic_account_name_does_not_create_strong_cross_domain_match(self):
+        account = {
+            "company_name": "Clinica Medicina Estetica",
+            "source_domain": "realclinic.it",
+            "territory_city": "Milano",
+        }
+        result = {
+            "title": "Clinica Medicina Estetica Milano",
+            "content": "Medicina estetica e trattamenti viso a Milano.",
+            "url": "https://otherclinic.it",
+        }
+        scored = score_account_web_result(result, account)
+        self.assertLess(scored["website_match_score"], 50)
+
 
 if __name__ == "__main__":
     unittest.main()
