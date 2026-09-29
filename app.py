@@ -272,6 +272,7 @@ display_columns = [
     "confidence",
     "recommended_action",
     "why_relevant",
+    "professional_setting",
     "source_domain",
     "source_url",
 ]
@@ -312,6 +313,8 @@ st.markdown(
 )
 if selected.get("matched_keywords"):
     st.markdown(f"**Observed fit signals:** {selected['matched_keywords']}")
+if selected.get("professional_setting"):
+    st.markdown(f"**Professional setting:** {selected['professional_setting']}")
 if selected.get("source_url"):
     st.markdown(f"**Evidence:** {selected['source_url']}")
 if selected.get("source_snippet"):
