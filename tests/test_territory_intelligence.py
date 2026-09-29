@@ -5,6 +5,7 @@ import pandas as pd
 from discovery_engine import TargetProfile, screen_candidates, qualification_handoff
 from territory_intelligence import (
     apply_territory_intelligence,
+    assess_territory_scope,
     build_territory_search_queries,
     contact_readiness,
     infer_territory_location,
@@ -69,6 +70,52 @@ class TerritoryIntelligenceTests(unittest.TestCase):
         self.assertEqual(location["territory_province"], "Milano")
         self.assertEqual(location["territory_city"], "Milano")
         self.assertEqual(location["territory_location_confidence"], 100.0)
+
+    def test_explicit_foreign_source_evidence_is_held_out_of_territory(self):
+        row = {
+            "company_name": "Buckeye Dermatology",
+            "source_title": "Dermatology in Columbus Ohio",
+            "source_snippet": "Dermatology practice serving Columbus, Ohio.",
+            "source_url": "https://example.com/columbus",
+            "discovery_query": "dermatologo medicina estetica Milano Lombardia Italy",
+        }
+        scope = assess_territory_scope(row, self.territory)
+        self.assertTrue(scope["territory_scope_conflict"])
+        self.assertIn("Ohio", scope["out_of_scope_evidence"])
+
+        data = pd.DataFrame([{
+            **row,
+            "qualification_ready": True,
+            "account_identity_status": "Likely organization",
+        }])
+        ranked = screen_candidates(data, self.profile)
+        enriched = apply_territory_intelligence(
+            ranked,
+            self.territory,
+            DELEO_NORTH_ITALY,
+        )
+        self.assertFalse(bool(enriched.iloc[0]["target_account_ready"]))
+        self.assertEqual(enriched.iloc[0]["territory_status"], "Out of Territory")
+
+    def test_known_vendor_signal_is_not_target_account(self):
+        data = pd.DataFrame([{
+            "company_name": "Allergan Aesthetics Italy",
+            "source_title": "Allergan Aesthetics Italy",
+            "source_snippet": "Medical aesthetics products and professional information.",
+            "source_url": "https://example.com/allergan",
+            "source_domain": "example.com",
+            "discovery_query": "medicina estetica Milano Lombardia Italy",
+            "qualification_ready": True,
+            "account_identity_status": "Likely organization",
+        }])
+        ranked = screen_candidates(data, self.profile)
+        enriched = apply_territory_intelligence(
+            ranked,
+            self.territory,
+            DELEO_NORTH_ITALY,
+        )
+        self.assertFalse(bool(enriched.iloc[0]["target_account_ready"]))
+        self.assertEqual(enriched.iloc[0]["commercial_track"], "Partner / Vendor Candidate")
 
     def test_search_scope_inference_is_explicitly_lower_confidence(self):
         row = {
