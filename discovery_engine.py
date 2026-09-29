@@ -27,6 +27,7 @@ class TargetProfile:
     min_company_size: int | None = None
     max_company_size: int | None = None
     target_roles: list[str] = field(default_factory=list)
+    search_archetypes: list[str] = field(default_factory=list)
     value_proposition: str = ""
     weights: dict[str, float] = field(default_factory=lambda: DEFAULT_WEIGHTS.copy())
 
