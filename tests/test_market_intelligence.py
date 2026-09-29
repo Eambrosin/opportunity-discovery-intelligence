@@ -5,6 +5,7 @@ import pandas as pd
 from contact_discovery import _parse_person_title, score_contact_result
 from discovery_engine import TargetProfile, build_search_queries, screen_candidates
 from presets import get_preset
+from web_discovery import _account_identity, _company_from_title
 
 
 class MarketIntelligenceTests(unittest.TestCase):
@@ -78,6 +79,24 @@ class MarketIntelligenceTests(unittest.TestCase):
             ranked.iloc[0]["professional_setting"],
             "Professional/device eligibility to validate",
         )
+
+
+    def test_company_parser_prefers_brand_over_generic_treatment_page(self):
+        name = _company_from_title(
+            "Programmi viso | Medical Art",
+            "medicalart.it",
+        )
+        self.assertEqual(name, "Medical Art")
+
+    def test_pdf_cv_is_not_qualification_ready(self):
+        identity = _account_identity(
+            title="CV VINDIGNI VINCENZO 2024",
+            url="https://example.org/cv-vindigni-2024.pdf",
+            company_name="Example",
+            domain="example.org",
+        )
+        self.assertFalse(identity["qualification_ready"])
+        self.assertLess(identity["account_identity_score"], 60)
 
 
 if __name__ == "__main__":
