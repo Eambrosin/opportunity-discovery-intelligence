@@ -95,6 +95,14 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertIn("Alessandra Cecchini", name)
 
+    def test_generic_title_uses_practitioner_name_from_snippet(self):
+        name = _company_from_title(
+            "Medicina e Chirurgia Estetica e Ricostruttiva",
+            "alessandracecchini.it",
+            "La Dottoressa Alessandra Cecchini è specializzata in Chirurgia Plastica.",
+        )
+        self.assertEqual(name, "Alessandra Cecchini")
+
     def test_generic_title_falls_back_to_distinctive_domain_brand(self):
         name = _company_from_title(
             "Medicina e Chirurgia Estetica e Ricostruttiva",
