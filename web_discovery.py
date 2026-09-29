@@ -19,6 +19,7 @@ ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
     "yelp.com",
     "tripadvisor.com",
     "whatclinic.com",
+    "ambienteeuropa.info",
 ]
 
 CONTENT_TITLE_PATTERNS = [
@@ -143,6 +144,9 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
                 "/blog/",
                 "/lavora-con-noi",
                 "/jobs",
+                "/ricerca.php",
+                "/search/",
+                "/search?",
             ]
         )
     )
