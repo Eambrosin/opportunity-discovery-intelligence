@@ -146,6 +146,66 @@ class MarketIntelligenceTests(unittest.TestCase):
         self.assertEqual(handoff.iloc[0]["industry"], "Medical Aesthetics")
         self.assertEqual(handoff.iloc[0]["company_size_status"], "unknown")
 
+    def test_medical_aesthetics_supplier_is_routed_out_of_target_accounts(self):
+        profile = TargetProfile(
+            industry="Medical Aesthetics",
+            market_profile_id="medical_aesthetics",
+            countries=["Italy"],
+            business_models=["Aesthetic Medicine Clinic", "Medical Practice"],
+            required_keywords=["medicina estetica", "laser estetico"],
+        )
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Laser Technologies",
+                "source_title": "Example Laser Technologies",
+                "source_snippet": (
+                    "Produttore di apparecchiature laser ed elettromedicale "
+                    "per medici e cliniche di medicina estetica."
+                ),
+                "source_url": "https://example-lasers.it",
+                "qualification_ready": True,
+                "account_identity_status": "Likely organization",
+            }]
+        )
+        ranked = screen_candidates(data, profile)
+        self.assertFalse(bool(ranked.iloc[0]["target_account_ready"]))
+        self.assertEqual(
+            ranked.iloc[0]["commercial_track"],
+            "Partner / Vendor Candidate",
+        )
+
+    def test_medical_aesthetics_clinic_is_target_account_ready(self):
+        profile = TargetProfile(
+            industry="Medical Aesthetics",
+            market_profile_id="medical_aesthetics",
+            countries=["Italy"],
+            business_models=["Aesthetic Medicine Clinic", "Medical Practice"],
+            required_keywords=["medicina estetica", "laser estetico"],
+        )
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Clinic Milano",
+                "source_title": "Example Clinic Milano | Medicina Estetica",
+                "source_snippet": (
+                    "Clinica di medicina estetica a Milano con medico estetico, "
+                    "trattamenti laser e ringiovanimento cutaneo."
+                ),
+                "source_url": "https://example-clinic.it",
+                "qualification_ready": True,
+                "account_identity_status": "Likely organization",
+            }]
+        )
+        ranked = screen_candidates(data, profile)
+        self.assertTrue(bool(ranked.iloc[0]["target_account_ready"]))
+        self.assertEqual(
+            ranked.iloc[0]["commercial_track"],
+            "Practitioner Target",
+        )
+        self.assertEqual(
+            ranked.iloc[0]["score_breakdown"]["industry_fit"],
+            100.0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
