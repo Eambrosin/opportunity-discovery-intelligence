@@ -124,6 +124,10 @@ def _domain_brand(domain: str) -> str:
         if len(lower) <= 5 and lower.isalpha():
             return lower.upper()
 
+        if lower.endswith("epartners") and len(lower) > len("epartners"):
+            prefix = lower[:-len("epartners")]
+            return prefix.capitalize() + " e Partners"
+
         suffixes = [
             ("regenerative", " Regenerative"),
             ("dermatologo", " Dermatologo"),
@@ -172,6 +176,30 @@ def _looks_like_generic_service_label(value: str) -> bool:
     # token. Pure specialty + treatment + location labels should not become
     # account identities.
     return len(non_generic) == 0
+
+
+def _looks_like_person_name(value: str) -> bool:
+    text = " ".join(str(value or "").strip().split())
+    words = re.findall(r"[A-Za-zÀ-ÿ'’.-]+", text)
+    if not 2 <= len(words) <= 4:
+        return False
+
+    lowered = {word.lower().strip(".") for word in words}
+    blocked = {
+        "clinic", "clinica", "medical", "medico", "medicina",
+        "centro", "studio", "istituto", "chirurgia", "plastica",
+        "dermatologia", "estetica", "aesthetic", "laser",
+        "beauty", "home", "surgery", "dermatology",
+    }
+    if lowered & blocked:
+        return False
+
+    capitalized = sum(
+        1
+        for word in words
+        if word and (word[0].isupper() or word[0] in "ÀÈÉÌÒÙ")
+    )
+    return capitalized >= max(2, len(words) - 1)
 
 
 def _person_name_from_text(value: str) -> str:
@@ -241,6 +269,14 @@ def _company_from_title(
         part for part in parts
         if not _looks_like_content_title(part)
     ]
+
+    person_like_parts = [
+        part
+        for part in non_content_parts
+        if _looks_like_person_name(part)
+    ]
+    if person_like_parts:
+        return max(person_like_parts, key=lambda value: len(value.split()))
 
     domain_brand = _clean_domain_brand(domain)
     root_like = _url_depth(url) == 0 if url else False
