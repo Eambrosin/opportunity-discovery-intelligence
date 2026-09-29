@@ -241,6 +241,40 @@ def extract_technology_signals(
     }
 
 
+def technology_landscape(
+    row: pd.Series | dict,
+    vendor_profile: dict | None,
+) -> pd.DataFrame:
+    if not vendor_profile:
+        return pd.DataFrame()
+
+    evidence = " ".join(
+        [
+            _text(row.get("company_name")),
+            _text(row.get("source_title")),
+            _text(row.get("source_snippet")),
+            _text(row.get("business_model")),
+        ]
+    )
+
+    rows = []
+    for axis, terms in vendor_profile.get("technology_axes", {}).items():
+        matched = [term for term in terms if _contains(evidence, term)]
+        rows.append(
+            {
+                "technology_axis": axis,
+                "evidence_status": (
+                    "Observed in current evidence"
+                    if matched
+                    else "Not observed — validate"
+                ),
+                "matched_terms": ", ".join(matched[:4]),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
+
 def _professional_setting_score(value: str) -> float:
     normalized = _norm(value)
     if "medical setting signal observed" in normalized:
@@ -472,8 +506,10 @@ def territory_gaps(
     ranked: pd.DataFrame,
     territory: dict,
     cluster_ids: Iterable[str],
+    searched_cluster_ids: Iterable[str] | None = None,
 ) -> pd.DataFrame:
     clusters = selected_clusters(territory, cluster_ids)
+    searched = set(searched_cluster_ids or cluster_ids)
     counts = defaultdict(int)
     high_counts = defaultdict(int)
 
@@ -491,8 +527,10 @@ def territory_gaps(
         count = counts[cid]
         high = high_counts[cid]
 
-        if count == 0:
-            gap = "No mapped accounts yet"
+        if cid not in searched:
+            gap = "Not searched in current run"
+        elif count == 0:
+            gap = "Searched; no mapped accounts yet"
         elif high == 0:
             gap = "Accounts found; no 80+ opportunity yet"
         elif high >= 3:
