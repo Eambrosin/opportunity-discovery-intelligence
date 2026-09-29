@@ -9,8 +9,24 @@ import requests
 
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
 
+ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
+    "fresha.com",
+    "treatwell.it",
+    "treatwell.com",
+    "paginegialle.it",
+    "miodottore.it",
+    "doctoralia.it",
+    "yelp.com",
+    "tripadvisor.com",
+    "whatclinic.com",
+]
+
 CONTENT_TITLE_PATTERNS = [
     r"^cv\b",
+    r"^best .* near me",
+    r"^best .* in ",
+    r"\bnear me\b",
+    r"^top \d+",
     r"curriculum",
     r"programma congressuale",
     r"programma congresso",
@@ -107,8 +123,14 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
     title_text = str(title or "").strip()
     url_path = urlparse(str(url or "")).path.lower()
 
+    directory_like = any(
+        domain == blocked or domain.endswith("." + blocked)
+        for blocked in ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS
+    )
+
     document_like = (
-        url_path.endswith(".pdf")
+        directory_like
+        or url_path.endswith(".pdf")
         or _looks_like_content_title(title_text)
         or any(
             token in url_path
@@ -128,7 +150,10 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
     company_text = str(company_name or "").lower()
     org_signal = any(signal in company_text for signal in ORGANIZATION_SIGNALS)
 
-    if document_like and company_name == _domain_brand(domain):
+    if directory_like:
+        score = 20
+        status = "Directory / marketplace result — not a direct account"
+    elif document_like and company_name == _domain_brand(domain):
         score = 25
         status = "Content / document — validate account"
     elif document_like:
@@ -177,7 +202,9 @@ def discover_with_tavily(
                 "max_results": max_results_per_query,
                 "include_answer": False,
                 "include_raw_content": False,
-                "exclude_domains": exclude_domains or [],
+                "exclude_domains": sorted(
+                    set((exclude_domains or []) + ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS)
+                ),
             },
             timeout=timeout,
         )
