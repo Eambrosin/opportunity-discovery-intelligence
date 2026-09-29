@@ -414,6 +414,7 @@ def screen_candidates(df: pd.DataFrame, profile: TargetProfile) -> pd.DataFrame:
     for _, row in candidates.iterrows():
         result = score_candidate(row, profile)
         merged = row.to_dict()
+        merged["schema_version"] = "1.0"
         merged["market_profile_id"] = profile.market_profile_id
         merged["source_stage"] = "IDENTIFY"
         merged.update(result)
@@ -432,6 +433,7 @@ def screen_candidates(df: pd.DataFrame, profile: TargetProfile) -> pd.DataFrame:
 
 def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
     handoff = pd.DataFrame()
+    handoff["schema_version"] = "1.0"
     handoff["market_profile_id"] = ranked.get("market_profile_id", "")
     handoff["source_stage"] = "IDENTIFY"
     handoff["company_name"] = ranked.get("company_name", "")
