@@ -395,25 +395,98 @@ if run:
     except Exception as exc:
         st.error(f"Discovery failed: {exc}")
 
-ranked = st.session_state.ranked_candidates
+raw_ranked = st.session_state.ranked_candidates
 
-if ranked.empty:
+if raw_ranked.empty:
     st.info(
         "Configure the target market on the left and run discovery. "
         "The sample dataset works without any external API key."
     )
     st.stop()
 
+if "target_account_ready" in raw_ranked.columns:
+    ranked = raw_ranked[
+        raw_ranked["target_account_ready"].fillna(False).astype(bool)
+    ].copy()
+else:
+    ranked = raw_ranked.copy()
+
+held_back = raw_ranked.loc[
+    ~raw_ranked.index.isin(ranked.index)
+].copy()
+
+if ranked.empty:
+    st.warning(
+        "The search returned research evidence, but no sufficiently clear target accounts "
+        "were identified. Review the held-back results or broaden the search."
+    )
+    with st.expander(
+        f"Held-back research results ({len(held_back)})",
+        expanded=True,
+    ):
+        held_columns = [
+            "company_name",
+            "commercial_track",
+            "target_account_reason",
+            "account_identity_status",
+            "discovery_score",
+            "source_domain",
+            "source_url",
+        ]
+        st.dataframe(
+            held_back[
+                [column for column in held_columns if column in held_back.columns]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "source_url": st.column_config.LinkColumn("Source"),
+            },
+        )
+    st.stop()
+
 top = ranked[ranked["recommended_action"] != "Exclude"].copy()
 
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Candidates", len(ranked))
-m2.metric("80+ Fit", int((top["discovery_score"] >= 80).sum()))
-m3.metric("High Confidence", int((top["confidence"] == "High").sum()))
-m4.metric(
+m1, m2, m3, m4, m5 = st.columns(5)
+m1.metric("Raw Search Results", len(raw_ranked))
+m2.metric("Target Accounts", len(ranked))
+m3.metric("80+ Fit", int((top["discovery_score"] >= 80).sum()))
+m4.metric("High Confidence", int((top["confidence"] == "High").sum()))
+m5.metric(
     "Average Discovery Score",
     f"{top['discovery_score'].mean():.1f}" if not top.empty else "0.0",
 )
+
+if not held_back.empty:
+    with st.expander(
+        f"Held-back / partner research results ({len(held_back)})",
+        expanded=False,
+    ):
+        st.caption(
+            "These results remain available for research but are excluded from the target-account "
+            "ranking and qualification handoff because they look like content pages, directories, "
+            "suppliers/partners or otherwise ambiguous entities."
+        )
+        held_columns = [
+            "company_name",
+            "commercial_track",
+            "target_account_reason",
+            "account_identity_status",
+            "discovery_score",
+            "confidence",
+            "source_domain",
+            "source_url",
+        ]
+        st.dataframe(
+            held_back[
+                [column for column in held_columns if column in held_back.columns]
+            ],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "source_url": st.column_config.LinkColumn("Source"),
+            },
+        )
 
 if territory_mode and territory and "account_opportunity_score" in ranked.columns:
     st.subheader("Territory Command Center")
@@ -496,6 +569,8 @@ display_columns = [
     "recommended_action",
     "why_relevant",
     "professional_setting",
+    "commercial_track",
+    "target_account_reason",
     "account_identity_score",
     "account_identity_status",
     "account_opportunity_score",
@@ -876,17 +951,37 @@ if st.button("Generate Evidence-Aware Brief"):
 
 st.subheader("Export")
 
-csv = ranked.drop(columns=["score_breakdown"], errors="ignore").to_csv(index=False)
+target_csv = ranked.drop(
+    columns=["score_breakdown"],
+    errors="ignore",
+).to_csv(index=False)
+
 st.download_button(
-    "Download Discovery Results",
-    csv,
+    "Download Target Account Results",
+    target_csv,
     file_name=(
-        "territory_intelligence_results.csv"
+        "territory_target_accounts.csv"
         if territory_mode
-        else "opportunity_discovery_results.csv"
+        else "opportunity_target_accounts.csv"
     ),
     mime="text/csv",
 )
+
+raw_csv = raw_ranked.drop(
+    columns=["score_breakdown"],
+    errors="ignore",
+).to_csv(index=False)
+
+with st.expander("Raw research export", expanded=False):
+    st.caption(
+        "Includes held-back content pages, directories and partner/vendor signals for audit or later research."
+    )
+    st.download_button(
+        "Download Raw Discovery Research",
+        raw_csv,
+        file_name="raw_discovery_research.csv",
+        mime="text/csv",
+    )
 
 if territory_mode and territory:
     st.caption(
