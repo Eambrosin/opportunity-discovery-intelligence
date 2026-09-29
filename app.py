@@ -712,6 +712,75 @@ if not chart_df.empty:
     )
     st.plotly_chart(fig, use_container_width=True)
 
+with st.expander("Account Enrichment — Top Accounts", expanded=False):
+    st.caption(
+        "Optional enrichment searches public web evidence for a direct account website, "
+        "public phone/email/address and additional market-fit signals. "
+        "Run it selectively to control search-credit usage."
+    )
+
+    enrichment_tavily_key = server_tavily_key or tavily_key
+
+    batch_max = min(5, max(1, len(ranked)))
+    batch_count = st.slider(
+        "Accounts to enrich",
+        min_value=1,
+        max_value=batch_max,
+        value=min(3, batch_max),
+        key="batch_enrichment_count",
+    )
+
+    if not enrichment_tavily_key:
+        st.info(
+            "Configure TAVILY_API_KEY to enable Account Enrichment."
+        )
+    elif st.button(
+        "Enrich Top Accounts",
+        key="enrich_top_accounts",
+    ):
+        enriched_count = 0
+        progress = st.progress(0)
+        status_box = st.empty()
+
+        batch_accounts = ranked.head(batch_count).copy()
+
+        for position, (_, account_row) in enumerate(
+            batch_accounts.iterrows(),
+            start=1,
+        ):
+            account_name = str(account_row.get("company_name", ""))
+            status_box.write(
+                f"Enriching {position}/{batch_count}: {account_name}"
+            )
+            try:
+                enrichment = enrich_account(
+                    account=account_row.to_dict(),
+                    api_key=enrichment_tavily_key,
+                    fit_terms=profile.required_keywords,
+                    country=(
+                        profile.countries[0]
+                        if profile.countries
+                        else "Italy"
+                    ),
+                )
+                update_account_in_session(
+                    company_name=account_name,
+                    source_url=str(account_row.get("source_url", "") or ""),
+                    values=enrichment,
+                )
+                enriched_count += 1
+            except Exception as exc:
+                st.warning(
+                    f"Could not enrich {account_name}: {exc}"
+                )
+
+            progress.progress(position / batch_count)
+
+        status_box.success(
+            f"Account enrichment completed for {enriched_count}/{batch_count} accounts."
+        )
+        st.rerun()
+
 st.subheader("Opportunity Workspace")
 
 selected_company = st.selectbox(
