@@ -52,6 +52,31 @@ def split_values(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def safe_text(value, default: str = "") -> str:
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except Exception:
+        pass
+    text = str(value).strip()
+    if text.lower() in {"nan", "none", "<na>", "null"}:
+        return default
+    return text
+
+
+def safe_number(value, default: float = 0.0) -> float:
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
 def get_secret(name: str) -> str:
     try:
         value = st.secrets.get(name, "")
@@ -765,7 +790,7 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
                 )
                 update_account_in_session(
                     company_name=account_name,
-                    source_url=str(account_row.get("source_url", "") or ""),
+                    source_url=safe_text(account_row.get("source_url", "")),
                     values=enrichment,
                 )
                 enriched_count += 1
@@ -926,7 +951,7 @@ else:
 
                 update_account_in_session(
                     company_name=selected_company,
-                    source_url=str(selected.get("source_url", "") or ""),
+                    source_url=safe_text(selected.get("source_url", "")),
                     values=enrichment,
                 )
                 st.session_state[selected_enrichment_key] = enrichment
@@ -934,7 +959,7 @@ else:
         except Exception as exc:
             st.error(f"Account enrichment failed: {exc}")
 
-enrichment_status = str(selected.get("enrichment_status", "") or "")
+enrichment_status = safe_text(selected.get("enrichment_status", ""))
 if enrichment_status:
     e1, e2, e3 = st.columns(3)
     e1.metric(
@@ -943,23 +968,23 @@ if enrichment_status:
     )
     e2.metric(
         "Account Data Completeness",
-        f"{float(selected.get('account_data_completeness', 0) or 0):.0f}%",
+        f"{safe_number(selected.get('account_data_completeness', 0)):.0f}%",
     )
     e3.metric(
         "Website Evidence",
-        str(selected.get("website_evidence_status", "") or "Needs verification"),
+        safe_text(selected.get("website_evidence_status", ""), "Needs verification"),
     )
 
-    account_website = str(selected.get("account_website", "") or "")
+    account_website = safe_text(selected.get("account_website", ""))
     if account_website:
         st.markdown(f"**Account website:** {account_website}")
 
-    public_address = str(selected.get("public_address", "") or "")
+    public_address = safe_text(selected.get("public_address", ""))
     if public_address:
         st.markdown(f"**Public address:** {public_address}")
 
-    public_phone = str(selected.get("public_phone", "") or "")
-    public_email = str(selected.get("public_email", "") or "")
+    public_phone = safe_text(selected.get("public_phone", ""))
+    public_email = safe_text(selected.get("public_email", ""))
     if public_phone:
         st.markdown(f"**Public phone:** {public_phone}")
     if public_email:
@@ -967,17 +992,17 @@ if enrichment_status:
 
     st.markdown(
         f"**Contact-channel status:** "
-        f"{selected.get('contact_channel_status', 'No public contact channel observed')}"
+        f"{safe_text(selected.get('contact_channel_status', ''), 'No public contact channel observed')}"
     )
 
-    enrichment_fit = str(selected.get("enrichment_fit_signals", "") or "")
+    enrichment_fit = safe_text(selected.get("enrichment_fit_signals", ""))
     if enrichment_fit:
         st.markdown(
             f"**Additional public fit evidence:** {enrichment_fit}"
         )
 
-    enrichment_source = str(
-        selected.get("enrichment_source_url", "") or ""
+    enrichment_source = safe_text(
+        selected.get("enrichment_source_url", "")
     )
     if enrichment_source:
         st.markdown(
@@ -1151,26 +1176,26 @@ else:
                     "contact_status",
                     pd.Series([""] * len(contacts)),
                 ),
-                "account_website": str(
-                    selected.get("account_website", "") or ""
+                "account_website": safe_text(
+                    selected.get("account_website", "")
                 ),
-                "public_phone": str(
-                    selected.get("public_phone", "") or ""
+                "public_phone": safe_text(
+                    selected.get("public_phone", "")
                 ),
-                "public_email": str(
-                    selected.get("public_email", "") or ""
+                "public_email": safe_text(
+                    selected.get("public_email", "")
                 ),
-                "public_address": str(
-                    selected.get("public_address", "") or ""
+                "public_address": safe_text(
+                    selected.get("public_address", "")
                 ),
-                "enrichment_status": str(
-                    selected.get("enrichment_status", "") or ""
+                "enrichment_status": safe_text(
+                    selected.get("enrichment_status", "")
                 ),
-                "account_data_completeness": float(
-                    selected.get("account_data_completeness", 0) or 0
+                "account_data_completeness": safe_number(
+                    selected.get("account_data_completeness", 0)
                 ),
-                "website_evidence_status": str(
-                    selected.get("website_evidence_status", "") or ""
+                "website_evidence_status": safe_text(
+                    selected.get("website_evidence_status", "")
                 ),
             }
         )
