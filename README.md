@@ -205,6 +205,37 @@ The app can export either the full target-account handoff or a **Qualification-R
 
 ---
 
+## Sales Intelligence
+
+After discovery, enrichment and readiness assessment, the application can convert the current evidence into an explicit **sales motion** without claiming that the account is actively buying.
+
+The deterministic Sales Intelligence layer can provide:
+
+- buyer-access status
+- recommended sales motion
+- commercial hypothesis grounded in observed evidence
+- evidence-based commercial angle
+- next best action
+- qualification questions
+- evidence gaps to close
+- commercial validation flags
+
+Typical motions include:
+
+```text
+Research Identity
+Validate Fit Before Outreach
+Research & Enrich
+Complete Qualification Research
+Find Decision Maker
+Prepare Qualification Outreach
+Ready for Qualification Outreach
+```
+
+This layer is intentionally separate from Account Opportunity and Qualification Readiness. It does **not** calculate win probability, infer purchase intent, or recommend a specific device from public evidence.
+
+---
+
 ## Evidence-Aware Design
 
 The application distinguishes between:
@@ -369,6 +400,7 @@ opportunity-discovery-intelligence/
 ├── web_discovery.py
 ├── contact_discovery.py
 ├── account_enrichment.py
+├── sales_intelligence.py
 ├── presets.py
 ├── territory_profiles.py
 ├── territory_intelligence.py
@@ -385,7 +417,8 @@ opportunity-discovery-intelligence/
     ├── test_discovery_engine.py
     ├── test_market_intelligence.py
     ├── test_territory_intelligence.py
-    └── test_account_enrichment.py
+    ├── test_account_enrichment.py
+    └── test_sales_intelligence.py
 ```
 
 ---
