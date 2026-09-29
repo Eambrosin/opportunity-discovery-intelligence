@@ -58,24 +58,28 @@ Market Entry Intelligence
 
 Users can define:
 
+- reusable market preset or fully custom configuration
 - target industry
-- target countries
-- target regions
-- preferred business models
-- required keywords
-- exclusion keywords
+- target countries and regions
+- customer / business-model types
+- localized discovery archetypes
+- positive fit signals / keywords
+- exclusion signals
 - preferred company-size range
-- target commercial functions
+- target decision-maker roles
 - value proposition / commercial offer
 
 This makes the application adaptable to use cases such as:
 
+- medical-aesthetics clinics, physicians and estheticians in Italy
 - solar distributors in Italy
 - food importers in the GCC
 - SaaS channel partners in Spain
 - logistics companies in Brazil
 - industrial distributors in France
 - strategic B2B accounts by geography and company profile
+
+The medical-aesthetics preset includes localized Italian discovery language, clinic/practice archetypes, treatment-technology signals and role profiles. It intentionally keeps device/professional eligibility as a validation step rather than assuming every aesthetic professional can use every device.
 
 ---
 
@@ -170,7 +174,27 @@ Optional Tavily integration generates market-specific search queries and convert
 
 The application deduplicates results by domain and preserves the source URL and evidence snippet.
 
-This is intentionally **not** a LinkedIn scraper and does not depend on private personal data.
+Account discovery intentionally avoids social-network results so company research stays evidence-focused.
+
+### Public LinkedIn Contact Intelligence
+
+For a selected account, the app can run a separate Tavily search restricted to publicly indexed `linkedin.com/in` results and rank likely contacts against the configured target roles.
+
+For practitioner-led markets, a second workflow can discover public LinkedIn profiles across the market even when the professional is effectively the lead rather than an employee of a larger account.
+
+Outputs can include:
+
+- public profile name
+- headline
+- public LinkedIn URL
+- matched target role
+- matched market signals
+- contact / professional relevance score
+- confidence level
+- suggested outreach angle
+- source snippet
+
+The application does **not** log into LinkedIn, bypass access controls or scrape private profile content. Public search indexes can be stale, so current role and company should be verified before outreach.
 
 ---
 
@@ -250,6 +274,8 @@ opportunity-discovery-intelligence/
 ├── app.py
 ├── discovery_engine.py
 ├── web_discovery.py
+├── contact_discovery.py
+├── presets.py
 ├── ai_insights.py
 ├── requirements.txt
 ├── README.md
@@ -349,7 +375,8 @@ Potential next steps:
 - website enrichment
 - verified company-size enrichment
 - industry taxonomy mapping
-- contact-function discovery without personal-data scraping
+- richer public professional/contact discovery
+- role-specific outreach handoff
 - CRM integrations
 - account deduplication across sources
 - shared account identifiers across the Commercial Intelligence Toolkit
