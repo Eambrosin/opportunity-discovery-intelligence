@@ -448,5 +448,26 @@ def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
     handoff["discovery_score"] = ranked.get("discovery_score", 0)
     handoff["discovery_confidence"] = ranked.get("confidence", "")
     handoff["discovery_source_url"] = ranked.get("source_url", "")
+
+    optional_fields = [
+        "territory_profile_id",
+        "vendor_profile_id",
+        "territory_region",
+        "territory_province",
+        "territory_city",
+        "territory_cluster_id",
+        "territory_location_confidence",
+        "territory_location_basis",
+        "account_opportunity_score",
+        "territory_status",
+        "professional_setting",
+        "observed_technology_axes",
+        "technology_evidence",
+        "technology_validation_questions",
+    ]
+    for field_name in optional_fields:
+        if field_name in ranked.columns:
+            handoff[field_name] = ranked[field_name]
+
     handoff["requires_manual_qualification"] = True
     return handoff
