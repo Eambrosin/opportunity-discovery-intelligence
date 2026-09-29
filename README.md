@@ -78,6 +78,47 @@ The medical-aesthetics preset includes localized Italian discovery language, cli
 
 ---
 
+## Territory Intelligence Mode
+
+For Medical Aesthetics, the app includes a dedicated **North Italy Territory Intelligence** workflow covering:
+
+- Lombardia
+- Veneto
+- Trentino-Alto Adige / Südtirol
+
+The territory layer is independent from the generic market engine. It adds:
+
+- configurable province/city commercial clusters
+- Priority / Full Territory / Custom search scopes
+- bilingual Italian/German search logic for Bolzano / Bozen and Südtirol
+- Account Opportunity Score
+- source-observed vs search-scope location confidence
+- territory status such as `Find Decision Maker`, `Research & Enrich` and `Eligibility Validation`
+- treatment / technology evidence signals
+- public LinkedIn decision-maker discovery
+- Contact Readiness Score
+- `Ready for Outreach` / `Ready for Field Visit` execution statuses
+- region and province intelligence
+- searched-vs-unsearched coverage gaps
+
+**Research Coverage is not market share.** It measures the completeness of the current discovery dataset and explicitly distinguishes clusters that were not searched in the current run.
+
+### DELEO North Italy Commercial Program
+
+The optional DELEO profile adds commercial discussion themes and technology-fit evidence without automatically recommending a device.
+
+The profile is based on public DELEO information covering technology categories, training, after-sales support, marketing/digital enablement, patient-development support, localized events and KOL/educational activity.
+
+Public reference sources used by the profile:
+
+- https://www.deleo.fr/fr/contactez-nous/
+- https://www.deleo.fr/fr/devenir-distributeur/
+- https://www.deleo.fr/fr/blog/medecine-esthetique-mutation-2026/
+
+A technology marked **Not observed — validate** means only that it was not present in the evidence currently available. It does not mean the clinic does not offer it.
+
+---
+
 ## Explainable Discovery Model
 
 The default model evaluates:
@@ -271,6 +312,9 @@ opportunity-discovery-intelligence/
 ├── web_discovery.py
 ├── contact_discovery.py
 ├── presets.py
+├── territory_profiles.py
+├── territory_intelligence.py
+├── vendor_profiles.py
 ├── ai_insights.py
 ├── requirements.txt
 ├── README.md
@@ -376,7 +420,8 @@ Potential next steps:
 - account deduplication across sources
 - shared account identifiers across the Commercial Intelligence Toolkit
 - direct handoff to Lead Qualification
-- market-level discovery analytics
+- deeper territory-level discovery analytics
+- field-day planning with route-provider integration
 - buying-signal enrichment with explicit provenance
 - configurable scoring weights in the UI
 - saved ICP / target-market presets
