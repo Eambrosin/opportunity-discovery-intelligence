@@ -100,28 +100,42 @@ def normalize_candidate_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 def build_search_queries(profile: TargetProfile, max_queries: int = 8) -> list[str]:
     industry = _text(profile.industry)
     markets = profile.countries or profile.regions or [""]
-    models = profile.business_models or [""]
-    keyword_groups = profile.required_keywords or [""]
+    models = [item for item in profile.business_models if _text(item)]
+    archetypes = [item for item in profile.search_archetypes if _text(item)]
+    keywords = [item for item in profile.required_keywords if _text(item)]
 
     queries: list[str] = []
+
+    def add(parts: list[str]) -> None:
+        query = " ".join(part for part in parts if _text(part)).strip()
+        if query and query not in queries and len(queries) < max_queries:
+            queries.append(query)
+
     for market in markets:
-        for model in models:
-            core = " ".join(part for part in [industry, model, market] if _text(part))
-            if core and core not in queries:
-                queries.append(core)
+        add([industry, market])
 
-            for keyword in keyword_groups[:2]:
-                enriched = " ".join(
-                    part for part in [industry, model, keyword, market] if _text(part)
-                )
-                if enriched and enriched not in queries:
-                    queries.append(enriched)
+    discovery_terms = archetypes or models
+    for index, term in enumerate(discovery_terms):
+        market = markets[index % len(markets)] if markets else ""
+        keyword = keywords[index % len(keywords)] if keywords else ""
+        add([term, industry, keyword, market])
+        if len(queries) >= max_queries:
+            return queries
 
-            if len(queries) >= max_queries:
-                return queries[:max_queries]
+    for index, model in enumerate(models):
+        market = markets[index % len(markets)] if markets else ""
+        keyword = keywords[index % len(keywords)] if keywords else ""
+        add([model, keyword, market])
+        if len(queries) >= max_queries:
+            return queries
+
+    for index, keyword in enumerate(keywords):
+        market = markets[index % len(markets)] if markets else ""
+        add([industry, keyword, market])
+        if len(queries) >= max_queries:
+            return queries
 
     return queries[:max_queries]
-
 
 def _contains_any(haystack: str, needles: Iterable[str]) -> bool:
     h = _norm(haystack)
