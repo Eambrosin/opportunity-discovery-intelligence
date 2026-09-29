@@ -9,12 +9,14 @@ import plotly.express as px
 import streamlit as st
 
 from ai_insights import generate_evidence_aware_brief
+from contact_discovery import discover_linkedin_contacts
 from discovery_engine import (
     TargetProfile,
     build_search_queries,
     qualification_handoff,
     screen_candidates,
 )
+from presets import PRESETS, get_preset
 from web_discovery import discover_with_tavily
 
 
@@ -27,44 +29,114 @@ st.set_page_config(
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
 
+
+def split_values(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def get_secret(name: str) -> str:
+    try:
+        value = st.secrets.get(name, "")
+    except Exception:
+        value = ""
+    return value or os.getenv(name, "")
+
+
+server_tavily_key = get_secret("TAVILY_API_KEY")
+server_openai_key = get_secret("OPENAI_API_KEY")
+
+
 st.title("🔎 Opportunity Discovery Intelligence")
 st.caption(
-    "Evidence-aware target-account discovery for Business Development, GTM and international growth."
+    "Evidence-aware account discovery, market adaptation and public-contact intelligence "
+    "for Business Development, GTM and international growth."
 )
 
 with st.sidebar:
     st.header("Target Market Profile")
 
-    industry = st.text_input("Target industry", value="Renewable Energy")
-    countries_text = st.text_input("Target countries", value="Italy, France")
-    regions_text = st.text_input("Target regions", value="Europe")
-    models_text = st.text_input(
-        "Preferred business models",
-        value="Distributor, Wholesaler",
+    preset_name = st.selectbox(
+        "Market preset",
+        list(PRESETS.keys()),
+        help="Start from a reusable commercial scenario, then customize every field.",
     )
-    keywords_text = st.text_input(
-        "Required keywords",
-        value="solar, photovoltaic, storage",
+    preset = get_preset(preset_name)
+    preset_key = preset_name.lower().replace(" ", "_").replace("—", "-")
+
+    industry = st.text_input(
+        "Target industry",
+        value=preset["industry"],
+        key=f"industry_{preset_key}",
+    )
+    countries_text = st.text_input(
+        "Target countries",
+        value=preset["countries"],
+        key=f"countries_{preset_key}",
+    )
+    regions_text = st.text_input(
+        "Target regions",
+        value=preset["regions"],
+        key=f"regions_{preset_key}",
+    )
+    models_text = st.text_area(
+        "Customer / business-model types",
+        value=preset["business_models"],
+        height=100,
+        key=f"models_{preset_key}",
+        help="Comma-separated target account types. Local-language variants improve discovery.",
+    )
+    keywords_text = st.text_area(
+        "Fit signals / keywords",
+        value=preset["keywords"],
+        height=100,
+        key=f"keywords_{preset_key}",
+        help="Positive signals. They are treated as evidence clues, not an all-or-nothing checklist.",
     )
     excluded_text = st.text_input(
-        "Excluded keywords",
-        value="residential installer",
+        "Excluded signals",
+        value=preset["excluded_keywords"],
+        key=f"excluded_{preset_key}",
+    )
+    search_archetypes_text = st.text_area(
+        "Discovery archetypes / local market terms",
+        value=preset["search_archetypes"],
+        height=100,
+        key=f"archetypes_{preset_key}",
+        help="Localized phrases used to generate more realistic market searches.",
     )
 
     col_a, col_b = st.columns(2)
     with col_a:
-        min_size = st.number_input("Min employees", min_value=0, value=20, step=10)
+        min_size = st.number_input(
+            "Min employees",
+            min_value=0,
+            value=int(preset["min_size"]),
+            step=10,
+            key=f"min_size_{preset_key}",
+        )
     with col_b:
-        max_size = st.number_input("Max employees", min_value=0, value=500, step=50)
+        max_size = st.number_input(
+            "Max employees",
+            min_value=0,
+            value=int(preset["max_size"]),
+            step=50,
+            key=f"max_size_{preset_key}",
+        )
 
-    target_roles_text = st.text_input(
-        "Target functions",
-        value="Business Development, Commercial, Procurement",
+    target_roles_text = st.text_area(
+        "Target decision-maker roles",
+        value=preset["target_roles"],
+        height=100,
+        key=f"roles_{preset_key}",
     )
     value_proposition = st.text_area(
         "What are you offering?",
-        value="International commercial partnership and market-expansion support.",
+        value=preset["value_proposition"],
+        key=f"value_{preset_key}",
     )
+
+    if preset.get("note"):
+        st.info(preset["note"])
 
     st.header("Discovery Source")
     source_mode = st.radio(
@@ -73,20 +145,14 @@ with st.sidebar:
     )
 
     uploaded = None
-    tavily_key = ""
-    max_results = 5
+    tavily_key = server_tavily_key
+    max_results = 4
+    query_budget = 6
 
     if source_mode == "Upload CSV":
         uploaded = st.file_uploader("Upload company universe CSV", type=["csv"])
+
     elif source_mode == "Public web (Tavily)":
-        tavily_secret = ""
-        try:
-            tavily_secret = st.secrets.get("TAVILY_API_KEY", "")
-        except Exception:
-            tavily_secret = ""
-
-        tavily_key = tavily_secret or os.getenv("TAVILY_API_KEY", "")
-
         if tavily_key:
             st.success("Public web discovery is configured.")
         else:
@@ -97,16 +163,24 @@ with st.sidebar:
             tavily_key = st.text_input(
                 "Temporary Tavily API key",
                 type="password",
-                help="This value is used only for the current session and is not stored by the app.",
+                help="Used only for the current session and not stored by the app.",
             )
 
-        max_results = st.slider("Results per search query", 3, 7, 4)
+        query_budget = st.slider(
+            "Search breadth (queries)",
+            min_value=4,
+            max_value=10,
+            value=7 if "Medical Aesthetics" in preset_name else 6,
+            help="Higher breadth can improve fragmented-market coverage but uses more search credits.",
+        )
+        max_results = st.slider(
+            "Results per query",
+            min_value=3,
+            max_value=8,
+            value=5 if "Medical Aesthetics" in preset_name else 4,
+        )
 
     run = st.button("Discover & Rank", type="primary", use_container_width=True)
-
-
-def split_values(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 profile = TargetProfile(
@@ -119,6 +193,7 @@ profile = TargetProfile(
     min_company_size=int(min_size) if min_size else None,
     max_company_size=int(max_size) if max_size else None,
     target_roles=split_values(target_roles_text),
+    search_archetypes=split_values(search_archetypes_text),
     value_proposition=value_proposition,
 )
 
@@ -137,9 +212,9 @@ if run:
             source_df = pd.read_csv(uploaded)
 
         else:
-            queries = build_search_queries(profile, max_queries=6)
+            queries = build_search_queries(profile, max_queries=query_budget)
             if not queries:
-                st.warning("Define at least an industry, market or business model.")
+                st.warning("Define at least an industry, market or customer type.")
                 st.stop()
 
             st.write("**Generated discovery queries**")
@@ -150,6 +225,14 @@ if run:
                 api_key=tavily_key,
                 max_results_per_query=max_results,
                 search_depth="basic",
+                exclude_domains=[
+                    "linkedin.com",
+                    "facebook.com",
+                    "instagram.com",
+                    "youtube.com",
+                    "wikipedia.org",
+                    "pinterest.com",
+                ],
             )
 
         st.session_state.ranked_candidates = screen_candidates(source_df, profile)
@@ -189,6 +272,7 @@ display_columns = [
     "confidence",
     "recommended_action",
     "why_relevant",
+    "source_domain",
     "source_url",
 ]
 st.dataframe(
@@ -226,6 +310,8 @@ st.markdown(f"**Why relevant:** {selected['why_relevant']}")
 st.markdown(
     f"**Unknowns to validate:** {selected['unknowns_to_validate'] or 'None identified'}"
 )
+if selected.get("matched_keywords"):
+    st.markdown(f"**Observed fit signals:** {selected['matched_keywords']}")
 if selected.get("source_url"):
     st.markdown(f"**Evidence:** {selected['source_url']}")
 if selected.get("source_snippet"):
@@ -240,17 +326,78 @@ with st.expander("Explainable score"):
             pass
     st.json(breakdown)
 
+st.subheader("Public Contact & LinkedIn Discovery")
+st.caption(
+    "Finds publicly indexed LinkedIn profile snippets for the selected account. "
+    "It does not log into LinkedIn, scrape private pages or claim unverified contact details."
+)
+
+contact_key = f"linkedin_contacts::{selected_company}"
+contact_tavily_key = server_tavily_key or tavily_key
+
+if not contact_tavily_key:
+    st.info("Configure TAVILY_API_KEY to enable public LinkedIn contact discovery.")
+else:
+    contact_country = (
+        str(selected.get("country") or "").strip()
+        or (profile.countries[0] if profile.countries else "")
+    )
+
+    if st.button("Find Public LinkedIn Contacts"):
+        try:
+            with st.spinner("Searching public professional-profile evidence..."):
+                contacts = discover_linkedin_contacts(
+                    company_name=selected_company,
+                    country=contact_country,
+                    target_roles=profile.target_roles,
+                    api_key=contact_tavily_key,
+                    max_results=8,
+                )
+            st.session_state[contact_key] = contacts
+        except Exception as exc:
+            st.error(f"Contact discovery failed: {exc}")
+
+    contacts = st.session_state.get(contact_key, pd.DataFrame())
+    if isinstance(contacts, pd.DataFrame) and not contacts.empty:
+        contact_columns = [
+            "person_name",
+            "headline",
+            "contact_relevance_score",
+            "contact_confidence",
+            "matched_target_roles",
+            "why_contact",
+            "linkedin_url",
+            "source_snippet",
+        ]
+        st.dataframe(
+            contacts[[column for column in contact_columns if column in contacts.columns]],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
+            },
+        )
+        st.download_button(
+            "Download Contact Shortlist",
+            contacts.to_csv(index=False),
+            file_name="public_linkedin_contact_shortlist.csv",
+            mime="text/csv",
+        )
+        st.caption(
+            "Use profile evidence as a starting point. Verify the current role and company "
+            "before outreach; public search indexes can be stale."
+        )
+    else:
+        st.caption(
+            "Select a strong account and run contact discovery to identify likely decision makers."
+        )
+
 st.subheader("Optional AI Evidence Brief")
 st.caption(
     "AI is used only after deterministic discovery scoring and is instructed not to invent company facts."
 )
-openai_secret = ""
-try:
-    openai_secret = st.secrets.get("OPENAI_API_KEY", "")
-except Exception:
-    openai_secret = ""
 
-openai_key = openai_secret or os.getenv("OPENAI_API_KEY", "")
+openai_key = server_openai_key
 
 if openai_key:
     st.caption("AI evidence brief is enabled.")
@@ -271,6 +418,7 @@ if st.button("Generate Evidence-Aware Brief"):
             "business_models": profile.business_models,
             "required_keywords": profile.required_keywords,
             "target_roles": profile.target_roles,
+            "search_archetypes": profile.search_archetypes,
             "value_proposition": profile.value_proposition,
         },
         api_key=openai_key or None,
