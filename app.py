@@ -462,6 +462,19 @@ if run:
 
 raw_ranked = st.session_state.ranked_candidates
 
+if (
+    isinstance(raw_ranked, pd.DataFrame)
+    and not raw_ranked.empty
+    and territory_mode
+    and territory
+):
+    raw_ranked = apply_territory_intelligence(
+        ranked=raw_ranked,
+        territory=territory,
+        vendor_profile=vendor_profile,
+    )
+    st.session_state.ranked_candidates = raw_ranked
+
 if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
     readiness_rows = raw_ranked.apply(
         lambda row: pd.Series(
