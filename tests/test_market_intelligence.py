@@ -117,6 +117,50 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertEqual(name, "Dottorrossi")
 
+    def test_root_service_title_prefers_domain_brand(self):
+        name = _company_from_title(
+            "Soft Surgery Clinic, clinica di medicina estetica a Vicenza",
+            "medicalart.it",
+            "",
+            "https://www.medicalart.it",
+        )
+        self.assertEqual(name, "Medical Art")
+
+    def test_root_home_title_prefers_domain_brand(self):
+        name = _company_from_title(
+            "Home",
+            "almacare.it",
+            "",
+            "https://almacare.it",
+        )
+        self.assertEqual(name, "Alma Care")
+
+    def test_root_service_title_prefers_clinic_domain_identity(self):
+        name = _company_from_title(
+            "Laser Sciton e Medicina Estetica",
+            "rigeneraclinic.it",
+            "",
+            "https://www.rigeneraclinic.it",
+        )
+        self.assertEqual(name, "Rigenera Clinic")
+
+    def test_dottor_title_extracts_practitioner_name(self):
+        name = _company_from_title(
+            "Chirurgia Plastica ed Estetica a Brescia Dottor Gianpaolo Faini",
+            "fainichirurgiaplastica.it",
+        )
+        self.assertEqual(name, "Gianpaolo Faini")
+
+    def test_editorial_domains_are_excluded_from_direct_discovery(self):
+        for domain in ["yumpu.com", "larena.it", "sitri.it"]:
+            identity = _account_identity(
+                title="Medical aesthetics article",
+                url=f"https://{domain}/article",
+                company_name="Example",
+                domain=domain,
+            )
+            self.assertFalse(identity["qualification_ready"])
+
     def test_generic_service_label_is_not_direct_account_identity(self):
         identity = _account_identity(
             title="Clinica Medicina Estetica",
