@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 
 from contact_discovery import _parse_person_title, score_contact_result
-from discovery_engine import TargetProfile, build_search_queries, screen_candidates
+from discovery_engine import TargetProfile, build_search_queries, qualification_handoff, screen_candidates
 from presets import get_preset
 from web_discovery import _account_identity, _company_from_title
 
@@ -97,6 +97,54 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertFalse(identity["qualification_ready"])
         self.assertLess(identity["account_identity_score"], 60)
+
+    def test_directory_result_is_not_qualification_ready(self):
+        identity = _account_identity(
+            title="Best Facials near me in Verona",
+            url="https://www.fresha.com/lp/en/tt/facials/in/it-verona",
+            company_name="Best Facials near me in Verona",
+            domain="fresha.com",
+        )
+        self.assertFalse(identity["qualification_ready"])
+        self.assertEqual(
+            identity["account_identity_status"],
+            "Directory / marketplace result — not a direct account",
+        )
+
+    def test_sparse_medical_aesthetics_handoff_does_not_raise(self):
+        profile = TargetProfile(
+            industry="Medical Aesthetics",
+            market_profile_id="medical_aesthetics",
+            countries=["Italy"],
+            regions=["Europe"],
+        )
+        ranked = pd.DataFrame(
+            [
+                {
+                    "company_name": "Example Clinic",
+                    "country": "",
+                    "region": "",
+                    "industry": "",
+                    "company_size": pd.NA,
+                    "market_profile_id": "medical_aesthetics",
+                    "qualification_ready": True,
+                    "discovery_score": 74.9,
+                    "confidence": "High",
+                    "source_url": "https://exampleclinic.it",
+                    "territory_region": "Veneto",
+                    "territory_province": "Verona",
+                    "territory_city": "Verona",
+                    "account_opportunity_score": 82.0,
+                }
+            ]
+        )
+        handoff = qualification_handoff(ranked, profile=profile)
+        self.assertEqual(len(handoff), 1)
+        self.assertEqual(handoff.iloc[0]["schema_version"], "1.0")
+        self.assertEqual(handoff.iloc[0]["country"], "Italy")
+        self.assertEqual(handoff.iloc[0]["region"], "EU")
+        self.assertEqual(handoff.iloc[0]["industry"], "Medical Aesthetics")
+        self.assertEqual(handoff.iloc[0]["company_size_status"], "unknown")
 
 
 if __name__ == "__main__":
