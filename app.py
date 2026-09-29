@@ -1039,6 +1039,44 @@ else:
                     )
 
             st.session_state[contact_key] = contacts
+
+            if isinstance(contacts, pd.DataFrame) and not contacts.empty:
+                top_contact = contacts.iloc[0]
+                top_relevance = float(
+                    top_contact.get("contact_relevance_score", 0) or 0
+                )
+                top_confidence = str(
+                    top_contact.get("contact_confidence", "") or ""
+                )
+
+                decision_values = {
+                    "decision_maker_candidate_found": bool(
+                        top_relevance >= 75
+                    ),
+                    "decision_maker_verified": bool(
+                        top_relevance >= 100
+                        and top_confidence == "High"
+                    ),
+                    "decision_maker_name": str(
+                        top_contact.get("person_name", "") or ""
+                    ),
+                    "decision_maker_headline": str(
+                        top_contact.get("headline", "") or ""
+                    ),
+                    "decision_maker_linkedin": str(
+                        top_contact.get("linkedin_url", "") or ""
+                    ),
+                    "decision_maker_confidence": top_confidence,
+                    "decision_maker_relevance_score": top_relevance,
+                }
+
+                update_account_in_session(
+                    company_name=selected_company,
+                    source_url=str(selected.get("source_url", "") or ""),
+                    values=decision_values,
+                )
+
+            st.rerun()
         except Exception as exc:
             st.error(f"Contact discovery failed: {exc}")
 
@@ -1112,6 +1150,27 @@ else:
                 "contact_status": contacts.get(
                     "contact_status",
                     pd.Series([""] * len(contacts)),
+                ),
+                "account_website": str(
+                    selected.get("account_website", "") or ""
+                ),
+                "public_phone": str(
+                    selected.get("public_phone", "") or ""
+                ),
+                "public_email": str(
+                    selected.get("public_email", "") or ""
+                ),
+                "public_address": str(
+                    selected.get("public_address", "") or ""
+                ),
+                "enrichment_status": str(
+                    selected.get("enrichment_status", "") or ""
+                ),
+                "account_data_completeness": float(
+                    selected.get("account_data_completeness", 0) or 0
+                ),
+                "website_evidence_status": str(
+                    selected.get("website_evidence_status", "") or ""
                 ),
             }
         )
