@@ -165,8 +165,20 @@ def _keyword_score(evidence: str, required_keywords: Iterable[str]) -> tuple[flo
 
     evidence_norm = _norm(evidence)
     matched = [keyword for keyword in required if keyword in evidence_norm]
-    return round((len(matched) / len(required)) * 100, 1), matched
+    count = len(matched)
 
+    if count == 0:
+        score = 20.0
+    elif count == 1:
+        score = 55.0
+    elif count == 2:
+        score = 75.0
+    elif count == 3:
+        score = 90.0
+    else:
+        score = 100.0
+
+    return score, matched
 
 def _company_size_score(value, minimum: int | None, maximum: int | None) -> float | None:
     if minimum is None and maximum is None:
