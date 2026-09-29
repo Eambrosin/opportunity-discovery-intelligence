@@ -310,6 +310,8 @@ def extract_technology_signals(
             _text(row.get("company_name")),
             _text(row.get("source_title")),
             _text(row.get("source_snippet")),
+            _text(row.get("enrichment_evidence")),
+            _text(row.get("enrichment_fit_signals")),
             _text(row.get("business_model")),
         ]
     )
@@ -353,6 +355,8 @@ def technology_landscape(
             _text(row.get("company_name")),
             _text(row.get("source_title")),
             _text(row.get("source_snippet")),
+            _text(row.get("enrichment_evidence")),
+            _text(row.get("enrichment_fit_signals")),
             _text(row.get("business_model")),
         ]
     )
