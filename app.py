@@ -47,6 +47,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
+DEPLOYMENT_REVISION = "2026-09-29-sales-intelligence-2"
 
 
 def split_values(value: str) -> list[str]:
