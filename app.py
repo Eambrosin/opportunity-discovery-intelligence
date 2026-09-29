@@ -449,9 +449,20 @@ top = ranked[ranked["recommended_action"] != "Exclude"].copy()
 
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Raw Search Results", len(raw_ranked))
-m2.metric("Target Accounts", len(ranked))
+m2.metric("Target Account Candidates", len(ranked))
 m3.metric("80+ Fit", int((top["discovery_score"] >= 80).sum()))
-m4.metric("High Confidence", int((top["confidence"] == "High").sum()))
+m4.metric(
+    "High Confidence",
+    int(
+        (
+            top.get(
+                "account_evidence_confidence",
+                top["confidence"],
+            )
+            == "High"
+        ).sum()
+    ),
+)
 m5.metric(
     "Average Discovery Score",
     f"{top['discovery_score'].mean():.1f}" if not top.empty else "0.0",
@@ -521,17 +532,34 @@ if territory_mode and territory and "account_opportunity_score" in ranked.column
     province_view = territory_breakdown(ranked, "territory_province")
 
     if not region_view.empty:
-        region_chart = px.bar(
-            region_view,
-            x="territory_region",
-            y="high_opportunity",
-            hover_data=["accounts", "average_opportunity_score", "high_confidence"],
-            title="High-Opportunity Accounts by Region",
-            labels={
-                "territory_region": "Region",
-                "high_opportunity": "80+ Opportunity Accounts",
-            },
-        )
+        if int(region_view["high_opportunity"].sum()) > 0:
+            region_chart = px.bar(
+                region_view,
+                x="territory_region",
+                y="high_opportunity",
+                hover_data=["accounts", "average_opportunity_score", "high_confidence"],
+                title="80+ Opportunity Accounts by Region",
+                labels={
+                    "territory_region": "Region",
+                    "high_opportunity": "80+ Opportunity Accounts",
+                },
+            )
+        else:
+            region_chart = px.bar(
+                region_view,
+                x="territory_region",
+                y="average_opportunity_score",
+                hover_data=["accounts", "high_confidence"],
+                title="Average Account Opportunity Score by Region",
+                labels={
+                    "territory_region": "Region",
+                    "average_opportunity_score": "Average Opportunity Score",
+                },
+            )
+            st.caption(
+                "No account currently exceeds the strict 80+ threshold, so the chart shows "
+                "average opportunity quality by region instead of an empty high-opportunity chart."
+            )
         st.plotly_chart(region_chart, use_container_width=True)
 
     if not province_view.empty:
@@ -556,13 +584,35 @@ if territory_mode and territory and "account_opportunity_score" in ranked.column
                 )
                 st.dataframe(gaps, use_container_width=True, hide_index=True)
 
-st.subheader("Target Account Ranking")
+st.subheader("Target Account Candidate Ranking")
+
+ranking_view = ranked.copy()
+ranking_view["market_country"] = (
+    ranking_view["country"]
+    .fillna("")
+    .astype(str)
+    .str.strip()
+    .replace("", profile.countries[0] if profile.countries else "")
+)
+ranking_view["market_industry"] = (
+    ranking_view["industry"]
+    .fillna("")
+    .astype(str)
+    .str.strip()
+    .replace("", profile.industry)
+)
+ranking_view["account_type"] = ranking_view.get(
+    "commercial_track",
+    pd.Series([""] * len(ranking_view), index=ranking_view.index),
+)
+if "account_evidence_confidence" in ranking_view.columns:
+    ranking_view["confidence"] = ranking_view["account_evidence_confidence"]
 
 display_columns = [
     "company_name",
-    "country",
-    "industry",
-    "business_model",
+    "market_country",
+    "market_industry",
+    "account_type",
     "company_size",
     "discovery_score",
     "confidence",
@@ -583,7 +633,9 @@ display_columns = [
     "source_url",
 ]
 st.dataframe(
-    ranked[[column for column in display_columns if column in ranked.columns]],
+    ranking_view[
+        [column for column in display_columns if column in ranking_view.columns]
+    ],
     use_container_width=True,
     hide_index=True,
     column_config={
@@ -631,7 +683,13 @@ selected = ranked[ranked["company_name"].astype(str) == selected_company].iloc[0
 if territory_mode and "account_opportunity_score" in selected.index:
     w1, w2, w3, w4 = st.columns(4)
     w1.metric("Account Opportunity", f"{selected['account_opportunity_score']:.1f}")
-    w2.metric("Evidence Confidence", selected["confidence"])
+    w2.metric(
+        "Evidence Confidence",
+        selected.get(
+            "account_evidence_confidence",
+            selected["confidence"],
+        ),
+    )
     w3.metric("Territory Status", selected.get("territory_status", ""))
     w4.metric(
         "Province",
@@ -656,6 +714,8 @@ if selected.get("matched_keywords"):
     st.markdown(f"**Observed fit signals:** {selected['matched_keywords']}")
 if selected.get("professional_setting"):
     st.markdown(f"**Professional setting:** {selected['professional_setting']}")
+if selected.get("commercial_track"):
+    st.markdown(f"**Commercial track:** {selected['commercial_track']}")
 
 if territory_mode and "territory_location_basis" in selected.index:
     st.markdown(
@@ -700,6 +760,7 @@ if selected.get("source_snippet"):
     st.write(selected["source_snippet"])
 
 with st.expander("Explainable score"):
+    st.markdown("**Discovery fit score**")
     breakdown = selected["score_breakdown"]
     if isinstance(breakdown, str):
         try:
@@ -707,6 +768,20 @@ with st.expander("Explainable score"):
         except Exception:
             pass
     st.json(breakdown)
+
+    if selected.get("account_opportunity_breakdown"):
+        st.markdown("**Territory account opportunity score**")
+        account_breakdown = selected.get("account_opportunity_breakdown")
+        if isinstance(account_breakdown, str):
+            try:
+                account_breakdown = json.loads(account_breakdown)
+            except Exception:
+                pass
+        st.json(account_breakdown)
+        st.caption(
+            "The territory score combines discovery fit with location evidence, professional "
+            "setting and observed technology/treatment evidence. It does not infer deal value."
+        )
 
 st.subheader("Public Contact & LinkedIn Discovery")
 st.caption(
