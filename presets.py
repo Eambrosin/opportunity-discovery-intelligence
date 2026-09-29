@@ -42,10 +42,9 @@ PRESETS = {
             "Estetista, Esthetician"
         ),
         "search_archetypes": (
-            "clinica medicina estetica, studio medico estetico, "
-            "clinica dermatologia estetica, studio dermatologico, "
-            "clinica chirurgia plastica, centro estetico tecnologie, "
-            "estetista trattamenti corpo, medical spa"
+            "clinica medicina estetica, medico estetico studio, "
+            "dermatologo medicina estetica, chirurgo plastico medicina estetica, "
+            "centro estetico tecnologie, estetista trattamenti corpo, medical spa"
         ),
         "value_proposition": (
             "Advanced aesthetic-medical technology supported by training, service, "
