@@ -6,6 +6,26 @@ from typing import Iterable
 import pandas as pd
 
 
+COUNTRY_TO_COMMERCIAL_REGION = {
+    "Italy": "EU",
+    "France": "EU",
+    "Spain": "EU",
+    "Portugal": "EU",
+    "Germany": "EU",
+    "Austria": "EU",
+    "Brazil": "LATAM",
+    "Mexico": "LATAM",
+    "Colombia": "LATAM",
+    "Argentina": "LATAM",
+    "UAE": "MENA",
+    "United Arab Emirates": "MENA",
+    "Saudi Arabia": "MENA",
+    "United States": "NA",
+    "USA": "NA",
+    "Canada": "NA",
+}
+
+
 DEFAULT_WEIGHTS = {
     "industry_fit": 0.25,
     "geography_fit": 0.20,
@@ -431,23 +451,90 @@ def screen_candidates(df: pd.DataFrame, profile: TargetProfile) -> pd.DataFrame:
     return ranked
 
 
-def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
-    handoff = pd.DataFrame()
+def qualification_handoff(
+    ranked: pd.DataFrame,
+    profile: TargetProfile | None = None,
+) -> pd.DataFrame:
+    working = ranked.copy()
+
+    if "qualification_ready" in working.columns:
+        ready_mask = working["qualification_ready"].fillna(False).astype(bool)
+        working = working[ready_mask].copy()
+
+    if working.empty:
+        return pd.DataFrame()
+
+    profile_country = ""
+    if profile and len(profile.countries) == 1:
+        profile_country = profile.countries[0]
+
+    profile_industry = profile.industry if profile else ""
+
+    handoff = pd.DataFrame(index=working.index)
     handoff["schema_version"] = "1.0"
-    handoff["market_profile_id"] = ranked.get("market_profile_id", "")
+    handoff["market_profile_id"] = working.get("market_profile_id", "")
     handoff["source_stage"] = "IDENTIFY"
-    handoff["company_name"] = ranked.get("company_name", "")
-    handoff["country"] = ranked.get("country", "")
-    handoff["region"] = ranked.get("region", "")
-    handoff["industry"] = ranked.get("industry", "")
-    handoff["company_size"] = ranked.get("company_size", pd.NA)
+    handoff["company_name"] = working.get("company_name", "")
+
+    observed_country = working.get(
+        "country",
+        pd.Series("", index=working.index),
+    ).fillna("").astype(str).str.strip()
+
+    handoff["country"] = observed_country.where(
+        observed_country != "",
+        profile_country,
+    )
+    handoff["country_basis"] = observed_country.apply(
+        lambda value: "source observed" if value else "target-market context"
+    )
+
+    observed_region = working.get(
+        "region",
+        pd.Series("", index=working.index),
+    ).fillna("").astype(str).str.strip()
+
+    derived_region = handoff["country"].map(COUNTRY_TO_COMMERCIAL_REGION).fillna("")
+    handoff["region"] = observed_region.where(
+        observed_region != "",
+        derived_region,
+    )
+    handoff["region_basis"] = observed_region.apply(
+        lambda value: "source observed" if value else "derived from country context"
+    )
+
+    observed_industry = working.get(
+        "industry",
+        pd.Series("", index=working.index),
+    ).fillna("").astype(str).str.strip()
+
+    handoff["industry"] = observed_industry.where(
+        observed_industry != "",
+        profile_industry,
+    )
+    handoff["industry_basis"] = observed_industry.apply(
+        lambda value: "source observed" if value else "market-profile context"
+    )
+
+    handoff["company_size"] = working.get("company_size", pd.NA)
+    handoff["company_size_status"] = handoff["company_size"].apply(
+        lambda value: (
+            "observed"
+            if not pd.isna(value)
+            else "unknown"
+        )
+    )
+
     handoff["estimated_deal_value_usd"] = 0
     handoff["deal_value_status"] = "unknown"
-    handoff["engagement_signal"] = "cold"
+    handoff["engagement_signal"] = ""
     handoff["engagement_status"] = "unverified"
-    handoff["discovery_score"] = ranked.get("discovery_score", 0)
-    handoff["discovery_confidence"] = ranked.get("confidence", "")
-    handoff["discovery_source_url"] = ranked.get("source_url", "")
+
+    handoff["discovery_score"] = working.get("discovery_score", 0)
+    handoff["discovery_confidence"] = working.get("confidence", "")
+    handoff["discovery_source_url"] = working.get("source_url", "")
+    handoff["account_identity_score"] = working.get("account_identity_score", pd.NA)
+    handoff["account_identity_status"] = working.get("account_identity_status", "")
 
     optional_fields = [
         "territory_profile_id",
@@ -466,8 +553,8 @@ def qualification_handoff(ranked: pd.DataFrame) -> pd.DataFrame:
         "technology_validation_questions",
     ]
     for field_name in optional_fields:
-        if field_name in ranked.columns:
-            handoff[field_name] = ranked[field_name]
+        if field_name in working.columns:
+            handoff[field_name] = working[field_name]
 
     handoff["requires_manual_qualification"] = True
-    return handoff
+    return handoff.reset_index(drop=True)
