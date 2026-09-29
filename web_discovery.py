@@ -127,10 +127,10 @@ def _company_from_title(title: str, domain: str) -> str:
         if _name_distinctiveness(part) > 0
     ]
 
-    if distinctive_org_parts:
-        return max(distinctive_org_parts, key=_name_distinctiveness)
     if distinctive_parts:
         return max(distinctive_parts, key=_name_distinctiveness)
+    if distinctive_org_parts:
+        return max(distinctive_org_parts, key=_name_distinctiveness)
     if organization_parts:
         return organization_parts[0]
     if non_content_parts:
