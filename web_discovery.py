@@ -185,11 +185,17 @@ def _looks_like_person_name(value: str) -> bool:
         return False
 
     lowered = {word.lower().strip(".") for word in words}
+
+    if lowered and all(token in GENERIC_SERVICE_TOKENS for token in lowered):
+        return False
+
     blocked = {
         "clinic", "clinica", "medical", "medico", "medicina",
-        "centro", "studio", "istituto", "chirurgia", "plastica",
-        "dermatologia", "estetica", "aesthetic", "laser",
-        "beauty", "home", "surgery", "dermatology",
+        "centro", "studio", "istituto", "chirurgia", "chirurgo",
+        "plastica", "plastico", "dermatologia", "dermatologo",
+        "venereologia", "venereologico", "estetica", "aesthetic",
+        "laser", "beauty", "home", "surgery", "dermatology",
+        "specialista", "specialisti", "trattamento", "trattamenti",
     }
     if lowered & blocked:
         return False
