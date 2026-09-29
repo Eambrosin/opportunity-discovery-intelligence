@@ -448,6 +448,79 @@ def summarize_enrichment_results(
     }
 
 
+def assess_qualification_readiness(account: dict) -> dict:
+    """
+    Measure research completeness before commercial qualification.
+
+    This is not an opportunity score or win probability. It only describes
+    how much decision-useful account evidence is currently available.
+    """
+
+    score = 0.0
+    evidence = []
+
+    try:
+        identity_score = float(account.get("account_identity_score", 0) or 0)
+    except Exception:
+        identity_score = 0.0
+
+    if identity_score >= 70:
+        score += 20
+        evidence.append("account identity")
+
+    location_basis = _text(account.get("territory_location_basis"))
+    if location_basis.startswith("Source-observed"):
+        score += 20
+        evidence.append("source-observed location")
+    elif location_basis.startswith("Search-scope inferred"):
+        score += 8
+        evidence.append("scope-inferred location")
+
+    website_status = _text(account.get("website_evidence_status"))
+    if website_status == "High-confidence direct site":
+        score += 20
+        evidence.append("direct website")
+    elif website_status == "Probable direct site":
+        score += 12
+        evidence.append("probable website")
+
+    if _text(account.get("public_phone")) or _text(account.get("public_email")):
+        score += 15
+        evidence.append("public contact channel")
+
+    professional_setting = _text(account.get("professional_setting"))
+    if professional_setting and professional_setting != "Unknown setting":
+        score += 10
+        evidence.append("professional setting")
+
+    if _text(account.get("observed_technology_axes")):
+        score += 5
+        evidence.append("technology/treatment evidence")
+
+    if bool(account.get("decision_maker_candidate_found", False)):
+        score += 5
+        evidence.append("decision-maker candidate")
+
+    if bool(account.get("decision_maker_verified", False)):
+        score += 5
+        evidence.append("high-confidence decision-maker evidence")
+
+    score = min(round(score, 1), 100.0)
+
+    if score >= 70:
+        status = "Ready for Qualification"
+    elif score >= 45:
+        status = "Enrich Before Qualification"
+    else:
+        status = "Research Required"
+
+    return {
+        "qualification_readiness_score": score,
+        "qualification_readiness_status": status,
+        "qualification_readiness_evidence": ", ".join(evidence),
+    }
+
+
 def enrich_account(
     account: dict,
     api_key: str,
