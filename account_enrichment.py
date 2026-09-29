@@ -6,7 +6,23 @@ from urllib.parse import urlparse
 import pandas as pd
 import requests
 
-from web_discovery import ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS
+try:
+    from web_discovery import ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS
+except (ImportError, AttributeError):
+    # Keep account enrichment boot-safe if a deployment briefly loads modules
+    # from different revisions during an incremental refresh.
+    ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
+        "fresha.com",
+        "treatwell.it",
+        "treatwell.com",
+        "paginegialle.it",
+        "miodottore.it",
+        "doctoralia.it",
+        "yelp.com",
+        "tripadvisor.com",
+        "whatclinic.com",
+        "ambienteeuropa.info",
+    ]
 
 
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
