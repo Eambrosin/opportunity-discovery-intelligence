@@ -390,19 +390,25 @@ else:
 
         outreach_handoff = pd.DataFrame(
             {
+                "schema_version": "1.0",
+                "source_stage": "IDENTIFY",
+                "market_profile_id": profile.market_profile_id,
                 "contact_name": contacts["person_name"],
                 "company": selected_company,
                 "country": contact_country,
                 "industry": profile.industry,
                 "deal_type": "Prospecting",
                 "deal_value_usd": 0,
+                "deal_value_status": "unknown",
                 "engagement_signal": "cold",
+                "engagement_status": "unverified",
                 "score": float(selected["discovery_score"]),
                 "recommended_action": str(selected["recommended_action"]),
                 "score_rationale": str(selected["why_relevant"]),
                 "linkedin_url": contacts["linkedin_url"],
                 "contact_headline": contacts["headline"],
                 "outreach_angle": contacts["suggested_outreach_angle"],
+                "professional_setting": str(selected.get("professional_setting") or ""),
             }
         )
         st.download_button(
