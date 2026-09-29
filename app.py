@@ -17,6 +17,22 @@ from discovery_engine import (
     screen_candidates,
 )
 from presets import PRESETS, get_preset, profile_id_for
+from territory_intelligence import (
+    apply_territory_intelligence,
+    build_territory_search_queries,
+    enrich_contacts_with_readiness,
+    territory_breakdown,
+    territory_gaps,
+    territory_summary,
+)
+from territory_profiles import (
+    TERRITORIES,
+    all_cluster_ids,
+    cluster_labels,
+    get_territory,
+    priority_cluster_ids,
+)
+from vendor_profiles import VENDOR_PROFILES, get_vendor_profile
 from web_discovery import discover_with_tavily
 
 
@@ -138,6 +154,104 @@ with st.sidebar:
     if preset.get("note"):
         st.info(preset["note"])
 
+    territory_mode = False
+    territory = None
+    vendor_profile = None
+    selected_cluster_ids = []
+    selected_territory_regions = []
+
+    if profile_id_for(preset_name) == "medical_aesthetics":
+        st.header("Territory Intelligence")
+        territory_mode = st.toggle(
+            "Territory Intelligence Mode",
+            value=True,
+            help=(
+                "Adds province/city targeting, account opportunity scoring, "
+                "technology signals, contact readiness and territory-gap analytics."
+            ),
+        )
+
+        if territory_mode:
+            territory_name = st.selectbox(
+                "Territory",
+                list(TERRITORIES.keys()),
+            )
+            territory = get_territory(territory_name)
+
+            selected_territory_regions = st.multiselect(
+                "Regions in scope",
+                options=territory["regions"],
+                default=territory["regions"],
+            )
+
+            vendor_name = st.selectbox(
+                "Commercial program",
+                list(VENDOR_PROFILES.keys()),
+                index=(
+                    list(VENDOR_PROFILES.keys()).index(
+                        "DELEO — North Italy Commercial Program"
+                    )
+                    if "DELEO — North Italy Commercial Program" in VENDOR_PROFILES
+                    else 0
+                ),
+                help=(
+                    "Vendor profiles add discussion themes and technology-fit signals "
+                    "without turning evidence into unsupported product recommendations."
+                ),
+            )
+            vendor_profile = get_vendor_profile(vendor_name)
+
+            scope_mode = st.radio(
+                "Territory coverage",
+                [
+                    "Priority clusters",
+                    "Full territory",
+                    "Custom clusters",
+                ],
+                help=(
+                    "Priority clusters control search-credit use. Full territory covers "
+                    "all configured provinces. Custom lets you choose exact clusters."
+                ),
+            )
+
+            territory_labels = cluster_labels(territory)
+            region_cluster_ids = [
+                cluster["cluster_id"]
+                for cluster in territory["clusters"]
+                if cluster["region"] in selected_territory_regions
+            ]
+
+            if scope_mode == "Priority clusters":
+                selected_cluster_ids = [
+                    cid
+                    for cid in priority_cluster_ids(territory)
+                    if cid in region_cluster_ids
+                ]
+            elif scope_mode == "Full territory":
+                selected_cluster_ids = [
+                    cid
+                    for cid in all_cluster_ids(territory)
+                    if cid in region_cluster_ids
+                ]
+            else:
+                selected_cluster_ids = st.multiselect(
+                    "Commercial clusters",
+                    options=region_cluster_ids,
+                    default=[
+                        cid
+                        for cid in priority_cluster_ids(territory)
+                        if cid in region_cluster_ids
+                    ],
+                    format_func=lambda cid: territory_labels.get(cid, cid),
+                )
+
+            if vendor_profile:
+                st.caption(
+                    f"Commercial program: {vendor_profile['company']} · "
+                    f"{len(vendor_profile.get('support_themes', []))} support themes · "
+                    "no automatic device recommendation."
+                )
+
     st.header("Discovery Source")
     source_mode = st.radio(
         "Source",
@@ -166,12 +280,22 @@ with st.sidebar:
                 help="Used only for the current session and not stored by the app.",
             )
 
+        if territory_mode and territory:
+            default_queries = max(4, min(len(selected_cluster_ids), 18))
+            max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
+        else:
+            default_queries = 7 if "Medical Aesthetics" in preset_name else 6
+            max_query_budget = 10
+
         query_budget = st.slider(
             "Search breadth (queries)",
             min_value=4,
-            max_value=10,
-            value=7 if "Medical Aesthetics" in preset_name else 6,
-            help="Higher breadth can improve fragmented-market coverage but uses more search credits.",
+            max_value=max_query_budget,
+            value=min(default_queries, max_query_budget),
+            help=(
+                "In Territory Mode, one query is normally allocated per commercial cluster. "
+                "Higher breadth improves coverage but uses more search credits."
+            ),
         )
         max_results = st.slider(
             "Results per query",
@@ -213,7 +337,19 @@ if run:
             source_df = pd.read_csv(uploaded)
 
         else:
-            queries = build_search_queries(profile, max_queries=query_budget)
+            if territory_mode and territory:
+                if not selected_cluster_ids:
+                    st.warning("Select at least one territory cluster before running discovery.")
+                    st.stop()
+                queries = build_territory_search_queries(
+                    profile=profile,
+                    territory=territory,
+                    cluster_ids=selected_cluster_ids,
+                    max_queries=query_budget,
+                )
+            else:
+                queries = build_search_queries(profile, max_queries=query_budget)
+
             if not queries:
                 st.warning("Define at least an industry, market or customer type.")
                 st.stop()
@@ -236,7 +372,16 @@ if run:
                 ],
             )
 
-        st.session_state.ranked_candidates = screen_candidates(source_df, profile)
+        ranked_result = screen_candidates(source_df, profile)
+
+        if territory_mode and territory:
+            ranked_result = apply_territory_intelligence(
+                ranked=ranked_result,
+                territory=territory,
+                vendor_profile=vendor_profile,
+            )
+
+        st.session_state.ranked_candidates = ranked_result
 
     except Exception as exc:
         st.error(f"Discovery failed: {exc}")
@@ -261,6 +406,65 @@ m4.metric(
     f"{top['discovery_score'].mean():.1f}" if not top.empty else "0.0",
 )
 
+if territory_mode and territory and "account_opportunity_score" in ranked.columns:
+    st.subheader("Territory Command Center")
+    territory_metrics = territory_summary(ranked, territory)
+
+    t1, t2, t3, t4, t5 = st.columns(5)
+    t1.metric("Territory Accounts", territory_metrics["accounts"])
+    t2.metric("80+ Opportunity", territory_metrics["high_opportunity"])
+    t3.metric("Mapped Location", territory_metrics["mapped_location"])
+    t4.metric(
+        "Research Coverage",
+        f"{territory_metrics['research_coverage']:.0f}%",
+        help=(
+            "Share of discovered candidates with usable territory mapping. "
+            "This is research-data coverage, not market share."
+        ),
+    )
+    t5.metric(
+        "Eligibility Validation",
+        territory_metrics["eligibility_validation"],
+    )
+
+    region_view = territory_breakdown(ranked, "territory_region")
+    province_view = territory_breakdown(ranked, "territory_province")
+
+    if not region_view.empty:
+        region_chart = px.bar(
+            region_view,
+            x="territory_region",
+            y="high_opportunity",
+            hover_data=["accounts", "average_opportunity_score", "high_confidence"],
+            title="High-Opportunity Accounts by Region",
+            labels={
+                "territory_region": "Region",
+                "high_opportunity": "80+ Opportunity Accounts",
+            },
+        )
+        st.plotly_chart(region_chart, use_container_width=True)
+
+    if not province_view.empty:
+        st.markdown("**Province intelligence**")
+        st.dataframe(
+            province_view,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    if selected_cluster_ids:
+        gaps = territory_gaps(
+            ranked=ranked,
+            territory=territory,
+            cluster_ids=selected_cluster_ids,
+        )
+        if not gaps.empty:
+            with st.expander("Territory coverage & research gaps", expanded=False):
+                st.caption(
+                    "Coverage gaps describe the current discovery dataset, not the total addressable market."
+                )
+                st.dataframe(gaps, use_container_width=True, hide_index=True)
+
 st.subheader("Target Account Ranking")
 
 display_columns = [
@@ -274,6 +478,12 @@ display_columns = [
     "recommended_action",
     "why_relevant",
     "professional_setting",
+    "account_opportunity_score",
+    "territory_status",
+    "territory_region",
+    "territory_province",
+    "territory_city",
+    "observed_technology_axes",
     "source_domain",
     "source_url",
 ]
@@ -285,13 +495,30 @@ st.dataframe(
 
 chart_df = top.head(15)
 if not chart_df.empty:
+    chart_score = (
+        "account_opportunity_score"
+        if territory_mode and "account_opportunity_score" in chart_df.columns
+        else "discovery_score"
+    )
+    chart_title = (
+        "Top Territory Opportunities"
+        if chart_score == "account_opportunity_score"
+        else "Top Discovery Opportunities"
+    )
     fig = px.bar(
-        chart_df.sort_values("discovery_score"),
-        x="discovery_score",
+        chart_df.sort_values(chart_score),
+        x=chart_score,
         y="company_name",
         orientation="h",
-        title="Top Discovery Opportunities",
-        labels={"discovery_score": "Discovery Score", "company_name": "Company"},
+        title=chart_title,
+        labels={
+            chart_score: (
+                "Account Opportunity Score"
+                if chart_score == "account_opportunity_score"
+                else "Discovery Score"
+            ),
+            "company_name": "Company",
+        },
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -303,10 +530,20 @@ selected_company = st.selectbox(
 )
 selected = ranked[ranked["company_name"].astype(str) == selected_company].iloc[0]
 
-w1, w2, w3 = st.columns(3)
-w1.metric("Discovery Score", f"{selected['discovery_score']:.1f}")
-w2.metric("Confidence", selected["confidence"])
-w3.metric("Next Step", selected["recommended_action"])
+if territory_mode and "account_opportunity_score" in selected.index:
+    w1, w2, w3, w4 = st.columns(4)
+    w1.metric("Account Opportunity", f"{selected['account_opportunity_score']:.1f}")
+    w2.metric("Evidence Confidence", selected["confidence"])
+    w3.metric("Territory Status", selected.get("territory_status", ""))
+    w4.metric(
+        "Province",
+        selected.get("territory_province", "") or "Needs validation",
+    )
+else:
+    w1, w2, w3 = st.columns(3)
+    w1.metric("Discovery Score", f"{selected['discovery_score']:.1f}")
+    w2.metric("Confidence", selected["confidence"])
+    w3.metric("Next Step", selected["recommended_action"])
 
 st.markdown(f"**Why relevant:** {selected['why_relevant']}")
 st.markdown(
@@ -316,6 +553,31 @@ if selected.get("matched_keywords"):
     st.markdown(f"**Observed fit signals:** {selected['matched_keywords']}")
 if selected.get("professional_setting"):
     st.markdown(f"**Professional setting:** {selected['professional_setting']}")
+
+if territory_mode and "territory_location_basis" in selected.index:
+    st.markdown(
+        "**Territory mapping:** "
+        f"{selected.get('territory_region', '')} · "
+        f"{selected.get('territory_province', '')} · "
+        f"{selected.get('territory_city', '') or 'city not verified'} "
+        f"— {selected.get('territory_location_basis', '')}"
+    )
+
+    if selected.get("observed_technology_axes"):
+        st.markdown(
+            f"**Observed technology/treatment axes:** "
+            f"{selected['observed_technology_axes']}"
+        )
+    if selected.get("technology_evidence"):
+        st.markdown(
+            f"**Observed evidence terms:** {selected['technology_evidence']}"
+        )
+    if selected.get("technology_validation_questions"):
+        st.markdown(
+            f"**Commercial validation:** "
+            f"{selected['technology_validation_questions']}"
+        )
+
 if selected.get("source_url"):
     st.markdown(f"**Evidence:** {selected['source_url']}")
 if selected.get("source_snippet"):
@@ -350,13 +612,30 @@ else:
     if st.button("Find Public LinkedIn Contacts"):
         try:
             with st.spinner("Searching public professional-profile evidence..."):
+                location_parts = [
+                    str(selected.get("territory_city") or "").strip(),
+                    str(selected.get("territory_province") or "").strip(),
+                    str(selected.get("territory_region") or "").strip(),
+                ]
+                location_context = " ".join(
+                    part for part in location_parts if part
+                )
+
                 contacts = discover_linkedin_contacts(
                     company_name=selected_company,
                     country=contact_country,
                     target_roles=profile.target_roles,
                     api_key=contact_tavily_key,
                     max_results=8,
+                    location_context=location_context,
                 )
+
+                if territory_mode:
+                    contacts = enrich_contacts_with_readiness(
+                        contacts=contacts,
+                        account_row=selected,
+                    )
+
             st.session_state[contact_key] = contacts
         except Exception as exc:
             st.error(f"Contact discovery failed: {exc}")
@@ -370,6 +649,9 @@ else:
             "contact_confidence",
             "matched_target_roles",
             "why_contact",
+            "contact_readiness_score",
+            "contact_status",
+            "suggested_outreach_angle",
             "linkedin_url",
             "source_snippet",
         ]
@@ -409,6 +691,26 @@ else:
                 "contact_headline": contacts["headline"],
                 "outreach_angle": contacts["suggested_outreach_angle"],
                 "professional_setting": str(selected.get("professional_setting") or ""),
+                "territory_profile_id": str(selected.get("territory_profile_id") or ""),
+                "vendor_profile_id": str(selected.get("vendor_profile_id") or ""),
+                "territory_region": str(selected.get("territory_region") or ""),
+                "territory_province": str(selected.get("territory_province") or ""),
+                "territory_city": str(selected.get("territory_city") or ""),
+                "territory_cluster_id": str(selected.get("territory_cluster_id") or ""),
+                "account_opportunity_score": float(
+                    selected.get("account_opportunity_score")
+                    or selected.get("discovery_score")
+                    or 0
+                ),
+                "territory_status": str(selected.get("territory_status") or ""),
+                "contact_readiness_score": contacts.get(
+                    "contact_readiness_score",
+                    pd.Series([0] * len(contacts)),
+                ),
+                "contact_status": contacts.get(
+                    "contact_status",
+                    pd.Series([""] * len(contacts)),
+                ),
             }
         )
         st.download_button(
@@ -438,6 +740,20 @@ else:
     if st.button("Find Market Professionals on LinkedIn"):
         try:
             with st.spinner("Searching public professional-profile evidence across the target market..."):
+                professional_locations = (
+                    selected_territory_regions
+                    if territory_mode and selected_territory_regions
+                    else []
+                )
+                if (
+                    territory_mode
+                    and "Trentino-Alto Adige" in professional_locations
+                ):
+                    professional_locations = (
+                        professional_locations
+                        + ["Bolzano Bozen Südtirol"]
+                    )
+
                 professionals = discover_linkedin_market_professionals(
                     industry=profile.industry,
                     country=profile.countries[0] if profile.countries else "",
@@ -445,6 +761,7 @@ else:
                     market_terms=profile.required_keywords + profile.search_archetypes,
                     api_key=contact_tavily_key,
                     max_results=12,
+                    locations=professional_locations,
                 )
             st.session_state[market_professional_key] = professionals
         except Exception as exc:
@@ -522,9 +839,20 @@ csv = ranked.drop(columns=["score_breakdown"], errors="ignore").to_csv(index=Fal
 st.download_button(
     "Download Discovery Results",
     csv,
-    file_name="opportunity_discovery_results.csv",
+    file_name=(
+        "territory_intelligence_results.csv"
+        if territory_mode
+        else "opportunity_discovery_results.csv"
+    ),
     mime="text/csv",
 )
+
+if territory_mode and territory:
+    st.caption(
+        "Territory exports include account opportunity, province/city mapping, "
+        "technology signals and research-status fields. Location inferred only from "
+        "search scope remains explicitly marked for verification."
+    )
 
 handoff = qualification_handoff(top)
 st.download_button(
