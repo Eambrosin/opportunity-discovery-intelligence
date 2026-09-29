@@ -1,6 +1,7 @@
 import unittest
 
 from account_enrichment import (
+    assess_qualification_readiness,
     build_enrichment_queries,
     extract_public_contact_channels,
     score_account_web_result,
@@ -90,6 +91,49 @@ class AccountEnrichmentTests(unittest.TestCase):
         }
         scored = score_account_web_result(result, account)
         self.assertLess(scored["website_match_score"], 50)
+
+    def test_qualification_readiness_separates_research_completeness_from_fit(self):
+        result = assess_qualification_readiness(
+            {
+                "account_identity_score": 90,
+                "territory_location_basis": "Source-observed city",
+                "website_evidence_status": "High-confidence direct site",
+                "public_email": "info@exampleclinic.it",
+                "professional_setting": "Medical-setting signal observed",
+                "observed_technology_axes": "Skin / Regeneration",
+                "decision_maker_candidate_found": True,
+                "decision_maker_verified": False,
+            }
+        )
+        self.assertEqual(
+            result["qualification_readiness_status"],
+            "Ready for Qualification",
+        )
+        self.assertGreaterEqual(
+            result["qualification_readiness_score"],
+            70,
+        )
+        self.assertIn(
+            "direct website",
+            result["qualification_readiness_evidence"],
+        )
+
+    def test_scope_inference_without_enrichment_requires_more_research(self):
+        result = assess_qualification_readiness(
+            {
+                "account_identity_score": 70,
+                "territory_location_basis": "Search-scope inferred; verify location",
+                "professional_setting": "Medical-setting signal observed",
+            }
+        )
+        self.assertEqual(
+            result["qualification_readiness_status"],
+            "Research Required",
+        )
+        self.assertLess(
+            result["qualification_readiness_score"],
+            45,
+        )
 
 
 if __name__ == "__main__":
