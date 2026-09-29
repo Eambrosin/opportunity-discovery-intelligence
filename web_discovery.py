@@ -40,6 +40,7 @@ def discover_with_tavily(
     max_results_per_query: int = 5,
     timeout: int = 30,
     search_depth: str = "basic",
+    exclude_domains: list[str] | None = None,
 ) -> pd.DataFrame:
     if not api_key:
         raise ValueError("A Tavily API key is required for public-web discovery.")
@@ -57,6 +58,7 @@ def discover_with_tavily(
                 "max_results": max_results_per_query,
                 "include_answer": False,
                 "include_raw_content": False,
+                "exclude_domains": exclude_domains or [],
             },
             timeout=timeout,
         )
@@ -82,6 +84,7 @@ def discover_with_tavily(
                     "source_title": title,
                     "source_snippet": result.get("content", ""),
                     "source_url": url,
+                    "source_domain": domain,
                     "discovery_query": query,
                 }
             )
