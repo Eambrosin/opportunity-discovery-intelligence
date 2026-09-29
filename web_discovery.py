@@ -46,7 +46,9 @@ def discover_with_tavily(
         raise ValueError("A Tavily API key is required for public-web discovery.")
 
     rows = []
-    seen_domains = set()
+    seen_urls = set()
+    seen_company_keys = set()
+    domain_counts = {}
 
     for query in queries:
         response = requests.post(
@@ -68,14 +70,29 @@ def discover_with_tavily(
         for result in payload.get("results", []):
             url = result.get("url", "")
             domain = _domain(url)
-            if not domain or domain in seen_domains:
+            if not domain or not url or url in seen_urls:
                 continue
-            seen_domains.add(domain)
 
             title = result.get("title", "")
+            company_name = _company_from_title(title, domain)
+            company_key = company_name.strip().lower()
+
+            # Avoid exact duplicates while allowing a small number of useful
+            # directory/profile results from the same domain in fragmented markets.
+            if company_key and company_key in seen_company_keys:
+                continue
+
+            if domain_counts.get(domain, 0) >= 3:
+                continue
+
+            seen_urls.add(url)
+            if company_key:
+                seen_company_keys.add(company_key)
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
+
             rows.append(
                 {
-                    "company_name": _company_from_title(title, domain),
+                    "company_name": company_name,
                     "country": "",
                     "region": "",
                     "industry": "",
