@@ -217,14 +217,14 @@ def score_contact_result(
             score += 20
             reasons.append("location match")
     else:
-        score = 45 if company else 0
+        score = 50 if company else 0
         if company:
             reasons.append("company match")
         if roles:
-            score += 30
+            score += 35
             reasons.append("target-role match")
         elif role_signal:
-            score += 15
+            score += 20
             reasons.append("professional-role signal")
         if location_matches:
             score += 15
