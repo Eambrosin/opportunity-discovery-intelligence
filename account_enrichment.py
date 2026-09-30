@@ -185,11 +185,30 @@ def _extract_address(text: str) -> str:
     return ""
 
 
+def _extract_contact_form_signal(text: str) -> bool:
+    normalized = _norm(text)
+    strong_patterns = [
+        r"completa tutti i campi.*mandare una mail",
+        r"modulo di contatto",
+        r"contact form",
+        r"invia(?:re)? (?:un |il )?messaggio",
+        r"scrivici",
+        r"contattaci",
+        r"mandare una mail",
+        r"invia(?:re)? (?:una |un )?email",
+    ]
+    return any(
+        re.search(pattern, normalized, flags=re.I)
+        for pattern in strong_patterns
+    )
+
+
 def extract_public_contact_channels(text: str) -> dict:
     return {
         "public_email": _extract_email(text),
         "public_phone": _extract_phone(text),
         "public_address": _extract_address(text),
+        "public_contact_form": _extract_contact_form_signal(text),
     }
 
 
@@ -365,6 +384,7 @@ def summarize_enrichment_results(
             "public_phone": "",
             "public_email": "",
             "public_address": "",
+            "public_contact_form": False,
             "contact_channel_status": "No public contact channel observed",
             "enrichment_fit_signals": "",
             "account_data_completeness": 0.0,
@@ -413,6 +433,8 @@ def summarize_enrichment_results(
         completeness += 15
     if contact["public_address"]:
         completeness += 15
+    if contact["public_contact_form"]:
+        completeness += 10
     if fit_matches:
         completeness += 15
 
@@ -422,6 +444,8 @@ def summarize_enrichment_results(
         contact_status = "Public phone observed"
     elif contact["public_email"]:
         contact_status = "Public email observed"
+    elif contact["public_contact_form"]:
+        contact_status = "Public website contact form observed"
     else:
         contact_status = "No public contact channel observed"
 
@@ -454,6 +478,7 @@ def summarize_enrichment_results(
         "public_phone": contact["public_phone"],
         "public_email": contact["public_email"],
         "public_address": contact["public_address"],
+        "public_contact_form": bool(contact["public_contact_form"]),
         "contact_channel_status": contact_status,
         "enrichment_fit_signals": ", ".join(dict.fromkeys(fit_matches)),
         "account_data_completeness": round(completeness, 1),
@@ -500,7 +525,11 @@ def assess_qualification_readiness(account: dict) -> dict:
         score += 12
         evidence.append("probable website")
 
-    if _text(account.get("public_phone")) or _text(account.get("public_email")):
+    if (
+        _text(account.get("public_phone"))
+        or _text(account.get("public_email"))
+        or bool(account.get("public_contact_form", False))
+    ):
         score += 15
         evidence.append("public contact channel")
 
