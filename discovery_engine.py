@@ -766,6 +766,7 @@ def qualification_handoff(
         "public_phone",
         "public_email",
         "public_address",
+        "public_contact_form",
         "contact_channel_status",
         "enrichment_fit_signals",
         "account_data_completeness",
