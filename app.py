@@ -1471,6 +1471,11 @@ else:
                 "vendor_profile_id": safe_text(
                     selected.get("vendor_profile_id", "")
                 ),
+                "vendor_company": (
+                    safe_text(vendor_profile.get("company", ""))
+                    if vendor_profile
+                    else ""
+                ),
                 "territory_region": safe_text(
                     selected.get("territory_region", "")
                 ),
