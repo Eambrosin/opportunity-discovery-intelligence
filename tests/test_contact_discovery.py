@@ -4,6 +4,8 @@ from unittest.mock import Mock, patch
 from contact_discovery import (
     _account_linkedin_queries,
     _search_linkedin_people,
+    discover_linkedin_contacts,
+    score_contact_result,
 )
 
 
@@ -83,6 +85,75 @@ class ContactDiscoveryTests(unittest.TestCase):
             results[0]["url"].lower(),
         )
 
+
+    def test_correct_practitioner_profile_outranks_scientist_homonym(self):
+        correct = score_contact_result(
+            title="Alessandra Cecchini - Chirurgo estetico - Loconlus ONLUS",
+            snippet=(
+                "Alessandra Cecchini Chirurgo estetico Milan, Lombardy, Italy. "
+                "Lavoro per ricreare l'armonia tra l'immagine e l'essenza di una persona."
+            ),
+            company_name="Alessandra Cecchini",
+            target_roles=["Titolare", "Medical Director", "Chirurgo Plastico"],
+            location_context="Milano Lombardia Italy",
+        )
+        scientist = score_contact_result(
+            title=(
+                "Alessandra (Lale) Cecchini - Staff Scientist | Team Builder"
+            ),
+            snippet=(
+                "San Diego, California, United States. "
+                "Stem cell, aging, molecular and cellular biology."
+            ),
+            company_name="Alessandra Cecchini",
+            target_roles=["Titolare", "Medical Director", "Chirurgo Plastico"],
+            location_context="Milano Lombardia Italy",
+        )
+
+        self.assertGreaterEqual(correct["contact_relevance_score"], 80)
+        self.assertEqual(correct["contact_confidence"], "High")
+        self.assertIn("chirurgo estetico", correct["professional_role_signal"])
+        self.assertTrue(correct["location_match_evidence"])
+        self.assertLess(scientist["contact_relevance_score"], 55)
+
+    @patch("contact_discovery._search_linkedin_people")
+    def test_contact_discovery_holds_back_weak_homonyms(self, search):
+        search.return_value = [
+            {
+                "url": "https://it.linkedin.com/in/alessandra-cecchini",
+                "title": "Alessandra Cecchini - Chirurgo estetico - Loconlus ONLUS",
+                "content": "Milan, Lombardy, Italy. Chirurgo estetico.",
+            },
+            {
+                "url": "https://www.linkedin.com/in/alessandra-lale-cecchini",
+                "title": "Alessandra (Lale) Cecchini - Staff Scientist",
+                "content": "San Diego, California, United States.",
+            },
+            {
+                "url": "https://uk.linkedin.com/in/alessandra-cecchini-research",
+                "title": "Alessandra Cecchini - Researcher",
+                "content": "Greater Dundee Area, GB.",
+            },
+        ]
+
+        contacts = discover_linkedin_contacts(
+            company_name="Alessandra Cecchini",
+            country="Italy",
+            target_roles=["Titolare", "Medical Director", "Chirurgo Plastico"],
+            api_key="test-key",
+            max_results=8,
+            location_context="Milano Lombardia",
+        )
+
+        self.assertEqual(len(contacts), 1)
+        self.assertEqual(
+            contacts.iloc[0]["person_name"],
+            "Alessandra Cecchini",
+        )
+        self.assertEqual(
+            int(contacts.iloc[0]["held_back_profile_count"]),
+            2,
+        )
 
 if __name__ == "__main__":
     unittest.main()
