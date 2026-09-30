@@ -69,6 +69,48 @@ class SalesIntelligenceTests(unittest.TestCase):
             "Decision maker + contact path observed",
         )
 
+    def test_practitioner_with_direct_site_and_contact_form_is_outreach_ready(self):
+        result = build_sales_intelligence(
+            {
+                "company_name": "Alessandra Cecchini",
+                "account_type": "Practitioner Target",
+                "commercial_track": "Practitioner Target",
+                "target_account_ready": True,
+                "account_identity_score": 70,
+                "account_opportunity_score": 77,
+                "qualification_readiness_score": 85,
+                "website_evidence_status": "High-confidence direct site",
+                "public_contact_form": True,
+                "territory_location_basis": "Source-observed city",
+                "decision_maker_candidate_found": False,
+                "decision_maker_verified": False,
+            },
+            profile={
+                "target_roles": ["Titolare", "Founder", "Direttore Sanitario"],
+                "value_proposition": "Advanced aesthetic-medical technology.",
+            },
+        )
+        self.assertEqual(
+            result["sales_motion"],
+            "Ready for Qualification Outreach",
+        )
+        self.assertIn(
+            "Practitioner candidate",
+            result["buyer_access_status"],
+        )
+        self.assertNotIn(
+            "decision-maker candidate",
+            result["sales_evidence_gaps"],
+        )
+        self.assertIn(
+            "decision authority / purchasing role",
+            result["sales_evidence_gaps"],
+        )
+        self.assertIn(
+            "personally evaluate and approve",
+            result["qualification_questions"],
+        )
+
     def test_vendor_context_creates_questions_without_claiming_purchase_intent(self):
         result = build_sales_intelligence(
             {
