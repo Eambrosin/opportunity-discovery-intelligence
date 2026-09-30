@@ -1243,6 +1243,7 @@ st.caption(
 )
 
 contact_key = f"linkedin_contacts::{selected_company}"
+contact_status_key = f"linkedin_contact_status::{selected_company}"
 contact_tavily_key = server_tavily_key or tavily_key
 
 if not contact_tavily_key:
@@ -1281,6 +1282,16 @@ else:
                     )
 
             st.session_state[contact_key] = contacts
+            if isinstance(contacts, pd.DataFrame) and not contacts.empty:
+                st.session_state[contact_status_key] = (
+                    f"Found {len(contacts)} publicly indexed LinkedIn person profile"
+                    f"{'s' if len(contacts) != 1 else ''}."
+                )
+            else:
+                st.session_state[contact_status_key] = (
+                    "No publicly indexed LinkedIn person profiles were found for this "
+                    "account in the current search. This does not mean no LinkedIn profile exists."
+                )
 
             if isinstance(contacts, pd.DataFrame) and not contacts.empty:
                 top_contact = contacts.iloc[0]
@@ -1320,7 +1331,19 @@ else:
 
             st.rerun()
         except Exception as exc:
+            st.session_state[contact_status_key] = (
+                f"Contact discovery failed: {exc}"
+            )
             st.error(f"Contact discovery failed: {exc}")
+
+    contact_status_message = st.session_state.get(contact_status_key, "")
+    if contact_status_message:
+        if contact_status_message.startswith("Found "):
+            st.success(contact_status_message)
+        elif contact_status_message.startswith("Contact discovery failed:"):
+            st.error(contact_status_message)
+        else:
+            st.warning(contact_status_message)
 
     contacts = st.session_state.get(contact_key, pd.DataFrame())
     if isinstance(contacts, pd.DataFrame) and not contacts.empty:
@@ -1433,9 +1456,10 @@ else:
             "before outreach; public search indexes can be stale."
         )
     else:
-        st.caption(
-            "Select a strong account and run contact discovery to identify likely decision makers."
-        )
+        if not contact_status_message:
+            st.caption(
+                "Select a strong account and run contact discovery to identify likely decision makers."
+            )
 
     st.markdown("**Market-level professional discovery**")
     st.caption(
