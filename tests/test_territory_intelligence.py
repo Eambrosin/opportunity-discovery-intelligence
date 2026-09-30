@@ -164,6 +164,35 @@ class TerritoryIntelligenceTests(unittest.TestCase):
         self.assertGreater(row["account_opportunity_score"], 0)
         self.assertNotIn("recommend", row["technology_validation_questions"].lower())
 
+    def test_no_technology_signal_gets_zero_technology_score(self):
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Clinic Milano",
+                "country": "Italy",
+                "region": "Europe",
+                "industry": "Medical Aesthetics",
+                "business_model": "Aesthetic Medicine Clinic",
+                "source_title": "Example Clinic Milano",
+                "source_snippet": "Clinica di medicina estetica a Milano.",
+                "source_url": "https://example.com",
+                "source_domain": "example.com",
+                "discovery_query": "clinica medicina estetica Milano Lombardia Italy",
+                "qualification_ready": True,
+                "account_identity_status": "Likely organization",
+            }]
+        )
+        ranked = screen_candidates(data, self.profile)
+        enriched = apply_territory_intelligence(
+            ranked,
+            self.territory,
+            DELEO_NORTH_ITALY,
+        )
+        breakdown = enriched.iloc[0]["account_opportunity_breakdown"]
+        self.assertEqual(
+            breakdown["technology_treatment_evidence"],
+            0.0,
+        )
+
     def test_enrichment_evidence_can_add_technology_signal(self):
         data = pd.DataFrame(
             [{
