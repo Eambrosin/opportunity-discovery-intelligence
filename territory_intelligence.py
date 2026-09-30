@@ -405,9 +405,9 @@ def _territory_status(
     if evidence_confidence < 45:
         return "Research First"
     if opportunity_score >= 82 and evidence_confidence >= 65:
-        return "Find Decision Maker"
-    if opportunity_score >= 68:
-        return "Research & Enrich"
+        return "High-Priority Territory Account"
+    if opportunity_score >= 68 and evidence_confidence >= 55:
+        return "Strong Territory Prospect"
     return "Territory Prospect"
 
 
