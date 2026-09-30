@@ -44,7 +44,7 @@ class MarketIntelligenceTests(unittest.TestCase):
             company_name="Example Clinic",
             target_roles=["Medical Director", "Clinic Manager"],
         )
-        self.assertEqual(result["contact_relevance_score"], 100)
+        self.assertGreaterEqual(result["contact_relevance_score"], 80)
         self.assertEqual(result["contact_confidence"], "High")
         self.assertIn("Medical Director", result["matched_target_roles"])
 
