@@ -227,6 +227,34 @@ class TerritoryIntelligenceTests(unittest.TestCase):
         )
         self.assertIn("criolipolisi", row["technology_evidence"].lower())
 
+    def test_strong_territory_status_is_not_a_sales_stage(self):
+        data = pd.DataFrame(
+            [{
+                "company_name": "Example Clinic Milano",
+                "country": "Italy",
+                "region": "Europe",
+                "industry": "Medical Aesthetics",
+                "business_model": "Aesthetic Medicine Clinic",
+                "source_title": "Example Clinic Milano",
+                "source_snippet": "Clinica di medicina estetica a Milano.",
+                "source_url": "https://example.com",
+                "source_domain": "example.com",
+                "discovery_query": "clinica medicina estetica Milano Lombardia Italy",
+                "qualification_ready": True,
+                "account_identity_status": "Likely organization",
+            }]
+        )
+        ranked = screen_candidates(data, self.profile)
+        enriched = apply_territory_intelligence(
+            ranked,
+            self.territory,
+            DELEO_NORTH_ITALY,
+        )
+        self.assertNotIn(
+            enriched.iloc[0]["territory_status"],
+            {"Research & Enrich", "Find Decision Maker"},
+        )
+
     def test_contact_readiness_can_mark_strong_account_ready_for_field_visit(self):
         contact = {
             "contact_relevance_score": 100,
