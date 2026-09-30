@@ -21,6 +21,16 @@ class AccountEnrichmentTests(unittest.TestCase):
         self.assertIn("+39", result["public_phone"])
         self.assertIn("Via Roma", result["public_address"])
 
+    def test_contact_form_is_recognized_as_public_contact_path(self):
+        text = (
+            "Grazie! Rispondiamo al più presto. "
+            "Completa tutti i campi per mandare una mail."
+        )
+        result = extract_public_contact_channels(text)
+        self.assertTrue(result["public_contact_form"])
+        self.assertEqual(result["public_email"], "")
+        self.assertEqual(result["public_phone"], "")
+
     def test_direct_source_domain_scores_strongly(self):
         account = {
             "company_name": "Medical Art",
@@ -115,6 +125,25 @@ class AccountEnrichmentTests(unittest.TestCase):
         )
         self.assertIn(
             "direct website",
+            result["qualification_readiness_evidence"],
+        )
+
+    def test_contact_form_counts_toward_research_readiness(self):
+        result = assess_qualification_readiness(
+            {
+                "account_identity_score": 70,
+                "territory_location_basis": "Source-observed city",
+                "website_evidence_status": "High-confidence direct site",
+                "public_contact_form": True,
+                "professional_setting": "Medical-setting signal observed",
+            }
+        )
+        self.assertEqual(
+            result["qualification_readiness_status"],
+            "Ready for Qualification",
+        )
+        self.assertIn(
+            "public contact channel",
             result["qualification_readiness_evidence"],
         )
 
