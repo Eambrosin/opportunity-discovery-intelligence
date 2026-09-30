@@ -123,22 +123,26 @@ def _search_linkedin_people(
     max_results_per_query: int,
     timeout: int,
     search_depth: str = "basic",
+    restrict_to_linkedin_domain: bool = True,
 ) -> list[dict]:
     results = []
     seen_urls = set()
 
     for query in queries:
+        request_payload = {
+            "api_key": api_key,
+            "query": query,
+            "search_depth": search_depth,
+            "max_results": max_results_per_query,
+            "include_answer": False,
+            "include_raw_content": False,
+        }
+        if restrict_to_linkedin_domain:
+            request_payload["include_domains"] = ["linkedin.com"]
+
         response = requests.post(
             TAVILY_ENDPOINT,
-            json={
-                "api_key": api_key,
-                "query": query,
-                "search_depth": search_depth,
-                "max_results": max_results_per_query,
-                "include_answer": False,
-                "include_raw_content": False,
-                "include_domains": ["linkedin.com/in"],
-            },
+            json=request_payload,
             timeout=timeout,
         )
         response.raise_for_status()
@@ -175,6 +179,37 @@ def _role_queries(prefix: str, target_roles: list[str], country: str) -> list[st
     return queries[:2]
 
 
+
+def _account_linkedin_queries(
+    company_name: str,
+    target_roles: list[str],
+    geographic_context: str,
+) -> list[str]:
+    exact = f'"{company_name}"'
+    queries = [
+        " ".join(
+            part
+            for part in [f"site:linkedin.com/in {exact}", geographic_context]
+            if part
+        ),
+        " ".join(
+            part
+            for part in [exact, "LinkedIn", geographic_context]
+            if part
+        ),
+    ]
+    queries.extend(
+        _role_queries(exact, target_roles, geographic_context)
+    )
+    return list(
+        dict.fromkeys(
+            query.strip()
+            for query in queries
+            if query.strip()
+        )
+    )[:4]
+
+
 def discover_linkedin_contacts(
     company_name: str,
     country: str,
@@ -190,8 +225,12 @@ def discover_linkedin_contacts(
     geographic_context = " ".join(
         part for part in [location_context, country] if str(part or "").strip()
     ).strip()
-    queries = _role_queries(f'"{company_name}"', target_roles, geographic_context)
-    per_query = max(3, min(6, max_results // max(1, len(queries)) + 1))
+    queries = _account_linkedin_queries(
+        company_name=company_name,
+        target_roles=target_roles,
+        geographic_context=geographic_context,
+    )
+    per_query = max(3, min(6, max_results // max(1, len(queries)) + 2))
 
     raw_results = _search_linkedin_people(
         queries=queries,
@@ -199,7 +238,18 @@ def discover_linkedin_contacts(
         max_results_per_query=per_query,
         timeout=timeout,
         search_depth="basic",
+        restrict_to_linkedin_domain=True,
     )
+
+    if not raw_results:
+        raw_results = _search_linkedin_people(
+            queries=queries[:2],
+            api_key=api_key,
+            max_results_per_query=max(4, per_query),
+            timeout=timeout,
+            search_depth="basic",
+            restrict_to_linkedin_domain=False,
+        )
 
     rows = []
     for result in raw_results:
@@ -273,7 +323,18 @@ def discover_linkedin_market_professionals(
         max_results_per_query=per_query,
         timeout=timeout,
         search_depth="basic",
+        restrict_to_linkedin_domain=True,
     )
+
+    if not raw_results:
+        raw_results = _search_linkedin_people(
+            queries=queries[:3],
+            api_key=api_key,
+            max_results_per_query=max(4, per_query),
+            timeout=timeout,
+            search_depth="basic",
+            restrict_to_linkedin_domain=False,
+        )
 
     rows = []
     for result in raw_results:
