@@ -32,6 +32,8 @@ ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
     "geoprogress.eu",
     "reumaticitrentini.it",
     "unimib.it",
+    "doctolib.it",
+    "giornaleitalianodinefrologia.it",
 ]
 
 CONTENT_TITLE_PATTERNS = [
@@ -64,6 +66,7 @@ CONTENT_TITLE_PATTERNS = [
     r"^download\b",
     r"^trova il\b",
     r"^trova la\b",
+    r"^listaxml$",
 ]
 
 GENERIC_SERVICE_TOKENS = {
@@ -210,14 +213,37 @@ def _looks_like_person_name(value: str) -> bool:
 
 def _person_name_from_text(value: str) -> str:
     text = " ".join(str(value or "").split())
-    match = re.search(
-        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottor\.?|Dottore|Dottoressa|Dr\.?|Prof\.?)\s+"
-        r"([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+\s+[A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)",
+    honorific = re.search(
+        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottor\.?|Dottore|Dottoressa|Dr\.?|Prof\.?)\s+",
         text,
     )
-    if not match:
+    if not honorific:
         return ""
-    return match.group(1).strip(" ,.;|-")
+
+    tail = text[honorific.end():]
+    tokens = []
+    cursor = 0
+
+    while len(tokens) < 4:
+        match = re.match(
+            r"\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)",
+            tail[cursor:],
+        )
+        if not match:
+            break
+
+        token = match.group(1).strip(" ,.;|-")
+        normalized = token.lower().strip(".")
+        if normalized in GENERIC_SERVICE_TOKENS:
+            break
+
+        tokens.append(token)
+        cursor += match.end()
+
+    if len(tokens) < 2:
+        return ""
+
+    return " ".join(tokens)
 
 
 def _clean_domain_brand(domain: str) -> str:
