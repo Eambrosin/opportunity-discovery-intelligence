@@ -205,6 +205,29 @@ The app can export either the full target-account handoff or a **Qualification-R
 
 ---
 
+## ENGAGE Handoff v2
+
+After public-contact validation, IDENTIFY can export an evidence-aware CSV specifically for the Adaptive Outreach Intelligence application.
+
+The v2 handoff carries forward:
+
+- validated contact name and LinkedIn profile
+- contact relevance, professional-role and location-match evidence
+- Account Opportunity
+- Qualification Readiness
+- Sales Motion
+- Buyer Access status
+- commercial hypothesis and commercial angle
+- next best action
+- qualification questions
+- evidence gaps and validation flags
+- account website, public contact form and enrichment status
+- observed technology axes and territory metadata
+
+This avoids forcing ENGAGE to rediscover account context and keeps uncertain information explicitly marked for validation rather than converting it into prospect-facing claims.
+
+---
+
 ## Sales Intelligence
 
 After discovery, enrichment and readiness assessment, the application can convert the current evidence into an explicit **sales motion** without claiming that the account is actively buying.
