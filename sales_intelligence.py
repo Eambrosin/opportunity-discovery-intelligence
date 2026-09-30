@@ -178,7 +178,10 @@ def evidence_gaps(account: dict, vendor_profile: dict | None = None) -> list[str
     except Exception:
         company_size_unknown = not bool(_text(company_size))
     if company_size_unknown:
-        gaps.append("company size")
+        if _is_practitioner_target(account):
+            gaps.append("practice scale / operating footprint")
+        else:
+            gaps.append("company size")
 
     if vendor_profile and not _text(account.get("observed_technology_axes")):
         gaps.append("current treatment / technology portfolio")
@@ -322,7 +325,10 @@ def _qualification_questions(
                 "Who owns this commercial decision, and who else participates in evaluation or approval?"
             )
 
-    if "company size" in gaps:
+    if (
+        "company size" in gaps
+        or "practice scale / operating footprint" in gaps
+    ):
         questions.append(
             "What is the approximate scale of the practice or business relevant to this opportunity?"
         )
