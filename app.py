@@ -1601,17 +1601,27 @@ else:
                 ),
             }
         )
-        st.download_button(
-            "Download Adaptive Outreach Handoff",
-            outreach_handoff.to_csv(index=False),
-            file_name="adaptive_outreach_handoff_v2.csv",
-            mime="text/csv",
-            help="Evidence-aware v2 handoff for the Adaptive Outreach Intelligence application.",
-        )
+        handoff_col, engage_col = st.columns(2)
+        with handoff_col:
+            st.download_button(
+                "Download ENGAGE Handoff v2",
+                outreach_handoff.to_csv(index=False),
+                file_name="adaptive_outreach_handoff_v2.csv",
+                mime="text/csv",
+                help="Evidence-aware v2 handoff for the Adaptive Outreach Intelligence application.",
+                use_container_width=True,
+            )
+        with engage_col:
+            st.link_button(
+                "Open ENGAGE — Adaptive Outreach",
+                "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
+                use_container_width=True,
+            )
 
         st.caption(
-            "Use profile evidence as a starting point. Verify the current role and company "
-            "before outreach; public search indexes can be stale."
+            "Download the ENGAGE Handoff v2 and upload that CSV in ENGAGE. "
+            "Use public-profile evidence as a starting point and verify the current role "
+            "before prospect-facing outreach; public search indexes can be stale."
         )
     else:
         if not contact_status_message:
