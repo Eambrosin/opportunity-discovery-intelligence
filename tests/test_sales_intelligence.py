@@ -107,6 +107,10 @@ class SalesIntelligenceTests(unittest.TestCase):
             result["sales_evidence_gaps"],
         )
         self.assertIn(
+            "practice scale / operating footprint",
+            result["sales_evidence_gaps"],
+        )
+        self.assertIn(
             "personally evaluate and approve",
             result["qualification_questions"],
         )
