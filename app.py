@@ -1200,6 +1200,13 @@ if enrichment_status:
     if public_email:
         st.markdown(f"**Public email:** {public_email}")
 
+    public_contact_form = (
+        str(selected.get("public_contact_form", "")).strip().lower()
+        in {"true", "1", "yes"}
+    )
+    if public_contact_form:
+        st.markdown("**Public contact form:** observed on the official website")
+
     st.markdown(
         f"**Contact-channel status:** "
         f"{safe_text(selected.get('contact_channel_status', ''), 'No public contact channel observed')}"
@@ -1397,6 +1404,10 @@ else:
                 ),
                 "public_address": safe_text(
                     selected.get("public_address", "")
+                ),
+                "public_contact_form": (
+                    str(selected.get("public_contact_form", "")).strip().lower()
+                    in {"true", "1", "yes"}
                 ),
                 "enrichment_status": safe_text(
                     selected.get("enrichment_status", "")
