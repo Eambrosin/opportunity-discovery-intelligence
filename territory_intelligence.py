@@ -434,9 +434,11 @@ def apply_territory_intelligence(
         setting_score = _professional_setting_score(
             _text(row.get("professional_setting"))
         )
-        technology_score = min(
-            100.0,
-            45.0 + (technology["technology_signal_count"] * 18.0),
+        technology_count = int(technology["technology_signal_count"])
+        technology_score = (
+            min(100.0, 45.0 + (technology_count * 18.0))
+            if technology_count > 0
+            else 0.0
         )
 
         account_breakdown = {
