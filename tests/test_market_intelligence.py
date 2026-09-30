@@ -169,8 +169,28 @@ class MarketIntelligenceTests(unittest.TestCase):
         )
         self.assertEqual(name, "Gianpaolo Faini")
 
+    def test_multiword_practitioner_name_is_not_truncated(self):
+        name = _company_from_title(
+            "Dott. Carlo Alberto Pallaoro | Chirurgia Plastica",
+            "pallaoro.it",
+        )
+        self.assertEqual(name, "Carlo Alberto Pallaoro")
+
+    def test_practitioner_parser_stops_before_specialty_words(self):
+        name = _company_from_title(
+            "Dr Pietro Carlomagno Medico Estetico Milano",
+            "drpietrocarlomagno.it",
+        )
+        self.assertEqual(name, "Pietro Carlomagno")
+
     def test_editorial_domains_are_excluded_from_direct_discovery(self):
-        for domain in ["yumpu.com", "larena.it", "sitri.it"]:
+        for domain in [
+            "yumpu.com",
+            "larena.it",
+            "sitri.it",
+            "doctolib.it",
+            "giornaleitalianodinefrologia.it",
+        ]:
             identity = _account_identity(
                 title="Medical aesthetics article",
                 url=f"https://{domain}/article",
