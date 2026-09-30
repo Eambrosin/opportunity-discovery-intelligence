@@ -46,6 +46,33 @@ Both tracks can feed EXPAND / Territory Intelligence.
 
 ---
 
+## Portfolio Demo Flow
+
+A concise interview/demo path is:
+
+1. **Configure Target Market** — choose Medical Aesthetics and the North Italy commercial program.
+2. **Discover & Rank** — show raw results, held-back research results and the cleaned Target Account Candidate Ranking.
+3. **Open Account Intelligence Workspace** — explain the difference between Account Opportunity and Qualification Readiness.
+4. **Enrich Selected Account** — verify direct website, public address/contact path and evidence completeness.
+5. **Validate Public LinkedIn Contact** — show the plausible-match shortlist and held-back homonyms.
+6. **Download ENGAGE Handoff v2** — demonstrate that evidence, gaps and contact context move downstream without being rediscovered.
+7. **Open ENGAGE** — show qualification-first channel/cadence selection and prospect-facing outreach.
+
+The strongest demo narrative is not “AI found a lead.” It is:
+
+> **Public evidence is converted into an explainable commercial workflow, with uncertainty preserved from discovery through outreach.**
+
+Recommended screenshots for the repository:
+
+- discovery executive summary
+- target-account ranking
+- Account Intelligence Workspace
+- Account Enrichment + Qualification Readiness
+- validated LinkedIn contact shortlist
+- ENGAGE Handoff v2 action area
+
+---
+
 ## Target Market Configuration
 
 Users can define:
@@ -93,11 +120,11 @@ The territory layer is independent from the generic market engine. It adds:
 - bilingual Italian/German search logic for Bolzano / Bozen and Südtirol
 - Account Opportunity Score
 - source-observed vs search-scope location confidence
-- territory status such as `Find Decision Maker`, `Research & Enrich` and `Eligibility Validation`
+- stable territory status such as `High-Priority Territory Account`, `Strong Territory Prospect` and `Territory Prospect`
 - treatment / technology evidence signals
 - public LinkedIn decision-maker discovery
 - Contact Readiness Score
-- `Ready for Outreach` / `Ready for Field Visit` execution statuses
+- contact-readiness and execution statuses kept separate from territory attractiveness
 - region and province intelligence
 - searched-vs-unsearched coverage gaps
 
