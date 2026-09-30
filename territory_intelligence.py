@@ -526,7 +526,10 @@ def contact_readiness(
 
     has_linkedin = bool(_text(contact_row.get("linkedin_url")))
     has_headline = bool(_text(contact_row.get("headline")))
-    matched_role = bool(_text(contact_row.get("matched_target_roles")))
+    matched_role = bool(
+        _text(contact_row.get("matched_target_roles"))
+        or _text(contact_row.get("professional_role_signal"))
+    )
     location_confidence = float(
         account_row.get("territory_location_confidence", 20) or 20
     )
