@@ -81,6 +81,34 @@ def _has_business_contact(account: dict) -> bool:
     return bool(
         _text(account.get("public_phone"))
         or _text(account.get("public_email"))
+        or _bool(account.get("public_contact_form", False))
+    )
+
+
+def _is_practitioner_target(account: dict) -> bool:
+    account_type = _text(account.get("account_type")).lower()
+    commercial_track = _text(account.get("commercial_track")).lower()
+    return (
+        "practitioner target" in account_type
+        or "practitioner target" in commercial_track
+    )
+
+
+def _practitioner_self_candidate(account: dict) -> bool:
+    if not _is_practitioner_target(account):
+        return False
+    if _number(account.get("account_identity_score")) < 70:
+        return False
+    return _text(account.get("website_evidence_status")) in {
+        "High-confidence direct site",
+        "Probable direct site",
+    }
+
+
+def _effective_decision_candidate(account: dict) -> bool:
+    return (
+        _bool(account.get("decision_maker_candidate_found", False))
+        or _practitioner_self_candidate(account)
     )
 
 
@@ -89,9 +117,11 @@ def _has_linkedin_contact(account: dict) -> bool:
 
 
 def buyer_access_status(account: dict) -> str:
-    decision_candidate = _bool(
+    explicit_decision_candidate = _bool(
         account.get("decision_maker_candidate_found", False)
     )
+    practitioner_candidate = _practitioner_self_candidate(account)
+    decision_candidate = explicit_decision_candidate or practitioner_candidate
     decision_verified = _bool(
         account.get("decision_maker_verified", False)
     )
@@ -100,8 +130,12 @@ def buyer_access_status(account: dict) -> str:
 
     if decision_verified and (business_contact or linkedin_contact):
         return "Decision maker + contact path observed"
+    if practitioner_candidate and (business_contact or linkedin_contact):
+        return "Practitioner candidate + public contact path observed"
     if decision_candidate and (business_contact or linkedin_contact):
         return "Decision-maker candidate + contact path observed"
+    if practitioner_candidate:
+        return "Practitioner is likely decision-maker candidate"
     if decision_candidate:
         return "Decision-maker candidate identified"
     if business_contact:
@@ -130,10 +164,13 @@ def evidence_gaps(account: dict, vendor_profile: dict | None = None) -> list[str
     if not _has_business_contact(account):
         gaps.append("public business contact channel")
 
-    if not _bool(account.get("decision_maker_candidate_found", False)):
+    if not _effective_decision_candidate(account):
         gaps.append("decision-maker candidate")
     elif not _bool(account.get("decision_maker_verified", False)):
-        gaps.append("current decision authority")
+        if _practitioner_self_candidate(account):
+            gaps.append("decision authority / purchasing role")
+        else:
+            gaps.append("current decision authority")
 
     company_size = account.get("company_size")
     try:
@@ -183,7 +220,7 @@ def _sales_motion(
         return "Research & Enrich"
     if readiness_score < 70:
         return "Complete Qualification Research"
-    if not _bool(account.get("decision_maker_candidate_found", False)):
+    if not _effective_decision_candidate(account):
         return "Find Decision Maker"
 
     contact_path = (
@@ -233,9 +270,21 @@ def _next_best_action(
             + suffix
         )
     if motion == "Prepare Qualification Outreach":
+        if _practitioner_self_candidate(account):
+            return (
+                "Treat the named practitioner as the likely decision-maker candidate, "
+                "establish a reliable public contact path and verify whether they personally "
+                "evaluate or approve new technologies for the practice."
+            )
         return (
             "Use the verified account evidence to prepare a concise qualification-first "
             "message, while establishing a reliable contact path."
+        )
+    if motion == "Ready for Qualification Outreach" and _practitioner_self_candidate(account):
+        return (
+            "Use the observed public contact path to open a qualification-first conversation "
+            "with the practitioner and verify their purchasing/technology decision authority, "
+            "current portfolio, timing and commercial scope."
         )
     return (
         "Open a qualification-first conversation using only observed evidence; "
@@ -257,10 +306,21 @@ def _qualification_questions(
             "Can we confirm the operating location and the site responsible for this decision?"
         )
 
-    if "decision-maker candidate" in gaps or "current decision authority" in gaps:
-        questions.append(
-            "Who owns this commercial decision, and who else participates in evaluation or approval?"
-        )
+    decision_gap = (
+        "decision-maker candidate" in gaps
+        or "current decision authority" in gaps
+        or "decision authority / purchasing role" in gaps
+    )
+    if decision_gap:
+        if _is_practitioner_target(account):
+            questions.append(
+                "Do you personally evaluate and approve new technologies/equipment for the practice, "
+                "or is another person involved in the decision?"
+            )
+        else:
+            questions.append(
+                "Who owns this commercial decision, and who else participates in evaluation or approval?"
+            )
 
     if "company size" in gaps:
         questions.append(
