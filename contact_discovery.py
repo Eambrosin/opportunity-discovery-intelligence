@@ -42,6 +42,105 @@ def _matches(evidence: str, values: list[str]) -> list[str]:
     return matches
 
 
+def _looks_like_person_account(value: str) -> bool:
+    words = [
+        token
+        for token in re.findall(r"[A-Za-zÀ-ÿ'’.-]+", str(value or ""))
+        if token
+    ]
+    if not 2 <= len(words) <= 4:
+        return False
+
+    blocked = {
+        "clinic", "clinica", "medical", "medico", "medicina",
+        "center", "centre", "centro", "studio", "istituto",
+        "group", "gruppo", "aesthetic", "estetica", "dermatologia",
+        "surgery", "chirurgia", "laser", "beauty",
+    }
+    lowered = {word.lower().strip(".") for word in words}
+    return not bool(lowered & blocked)
+
+
+def _name_match_score(person_name: str, account_name: str) -> tuple[int, str]:
+    if not _looks_like_person_account(account_name):
+        return 0, ""
+
+    person = _norm(person_name)
+    account = _norm(account_name)
+    if not person or not account:
+        return 0, ""
+
+    if person == account:
+        return 45, "exact practitioner-name match"
+
+    person_tokens = person.split()
+    account_tokens = account.split()
+    if not person_tokens or not account_tokens:
+        return 0, ""
+
+    if (
+        person_tokens[-1] == account_tokens[-1]
+        and person_tokens[0] == account_tokens[0]
+    ):
+        return 40, "strong practitioner-name match"
+
+    if person_tokens[-1] == account_tokens[-1]:
+        return 15, "surname-only match"
+
+    return 0, ""
+
+
+_LOCATION_ALIASES = {
+    "milano": {"milano", "milan"},
+    "milan": {"milano", "milan"},
+    "lombardia": {"lombardia", "lombardy"},
+    "lombardy": {"lombardia", "lombardy"},
+    "italy": {"italy", "italia"},
+    "italia": {"italy", "italia"},
+    "roma": {"roma", "rome"},
+    "rome": {"roma", "rome"},
+    "venezia": {"venezia", "venice"},
+    "venice": {"venezia", "venice"},
+}
+
+
+def _location_match(evidence: str, location_context: str) -> list[str]:
+    evidence_norm = _norm(evidence)
+    matched = []
+    for token in _norm(location_context).split():
+        if len(token) < 4:
+            continue
+        aliases = _LOCATION_ALIASES.get(token, {token})
+        if any(alias in evidence_norm for alias in aliases):
+            matched.append(token)
+    return list(dict.fromkeys(matched))
+
+
+def _professional_role_signal(evidence: str) -> str:
+    text = _norm(evidence)
+    signals = [
+        "chirurgo estetico",
+        "chirurgo plastico",
+        "plastic surgeon",
+        "aesthetic surgeon",
+        "medico estetico",
+        "aesthetic physician",
+        "dermatologo",
+        "dermatologist",
+        "medical director",
+        "direttore sanitario",
+        "titolare",
+        "owner",
+        "founder",
+        "clinic manager",
+        "practice manager",
+    ]
+    for signal in signals:
+        if signal in text:
+            return signal
+    return ""
+
+
 def _company_match(evidence: str, company_name: str) -> bool:
     company = _norm(company_name)
     if not company:
@@ -82,38 +181,77 @@ def score_contact_result(
     snippet: str,
     company_name: str,
     target_roles: list[str],
+    location_context: str = "",
 ) -> dict:
     evidence = f"{title} {snippet}".strip()
-    roles = _matches(evidence, target_roles)
-    company = _company_match(evidence, company_name)
+    current_identity_evidence = f"{title} {snippet[:400]}".strip()
+    person_name, _ = _parse_person_title(title)
 
-    if roles and company:
-        score = 100
-        confidence = "High"
-    elif roles:
-        score = 75
-        confidence = "Medium"
-    elif company:
-        score = 60
-        confidence = "Medium"
-    else:
-        score = 30
-        confidence = "Low"
+    roles = _matches(evidence, target_roles)
+    role_signal = _professional_role_signal(current_identity_evidence)
+    location_matches = _location_match(
+        current_identity_evidence,
+        location_context,
+    )
+    company = _company_match(evidence, company_name)
+    person_account = _looks_like_person_account(company_name)
+    name_score, name_reason = _name_match_score(
+        person_name,
+        company_name,
+    )
 
     reasons = []
-    if roles:
-        reasons.append("target-role match")
-    if company:
-        reasons.append("company match")
+    if person_account:
+        score = name_score
+        if name_reason:
+            reasons.append(name_reason)
+
+        if roles:
+            score += 25
+            reasons.append("target-role match")
+        elif role_signal:
+            score += 20
+            reasons.append("professional-role signal")
+
+        if location_matches:
+            score += 20
+            reasons.append("location match")
+    else:
+        score = 45 if company else 0
+        if company:
+            reasons.append("company match")
+        if roles:
+            score += 30
+            reasons.append("target-role match")
+        elif role_signal:
+            score += 15
+            reasons.append("professional-role signal")
+        if location_matches:
+            score += 15
+            reasons.append("location match")
+
+    score = min(100, score)
+
+    if score >= 80:
+        confidence = "High"
+    elif score >= 55:
+        confidence = "Medium"
+    else:
+        confidence = "Low"
+
     if not reasons:
         reasons.append("weak public-profile match")
+
+    outreach_roles = roles or ([role_signal] if role_signal else [])
 
     return {
         "contact_relevance_score": score,
         "contact_confidence": confidence,
         "matched_target_roles": ", ".join(roles),
+        "professional_role_signal": role_signal,
+        "location_match_evidence": ", ".join(location_matches),
         "why_contact": ", ".join(reasons),
-        "suggested_outreach_angle": _outreach_angle(roles),
+        "suggested_outreach_angle": _outreach_angle(outreach_roles),
     }
 
 
@@ -263,6 +401,7 @@ def discover_linkedin_contacts(
             snippet=snippet,
             company_name=company_name,
             target_roles=target_roles,
+            location_context=location_context,
         )
 
         rows.append(
@@ -281,10 +420,25 @@ def discover_linkedin_contacts(
     if contacts.empty:
         return contacts
 
-    return contacts.sort_values(
+    raw_count = len(contacts)
+    contacts = contacts[
+        contacts["contact_relevance_score"] >= 55
+    ].copy()
+
+    if contacts.empty:
+        empty = pd.DataFrame(columns=list(pd.DataFrame(rows).columns))
+        empty.attrs["raw_profile_count"] = raw_count
+        empty.attrs["held_back_profile_count"] = raw_count
+        return empty
+
+    contacts = contacts.sort_values(
         ["contact_relevance_score", "person_name"],
         ascending=[False, True],
     ).head(max_results).reset_index(drop=True)
+
+    contacts["raw_profile_count"] = raw_count
+    contacts["held_back_profile_count"] = raw_count - len(contacts)
+    return contacts
 
 
 def discover_linkedin_market_professionals(
