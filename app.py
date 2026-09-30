@@ -1397,8 +1397,8 @@ else:
 
         outreach_handoff = pd.DataFrame(
             {
-                "schema_version": "1.0",
-                "source_stage": "IDENTIFY",
+                "schema_version": "2.0",
+                "source_stage": "IDENTIFY_CONTACT_VALIDATED",
                 "market_profile_id": profile.market_profile_id,
                 "contact_name": contacts["person_name"],
                 "company": selected_company,
@@ -1409,25 +1409,134 @@ else:
                 "deal_value_status": "unknown",
                 "engagement_signal": "cold",
                 "engagement_status": "unverified",
-                "score": float(selected["discovery_score"]),
-                "recommended_action": str(selected["recommended_action"]),
-                "score_rationale": str(selected["why_relevant"]),
+                "score": safe_number(
+                    selected.get(
+                        "account_opportunity_score",
+                        selected.get("discovery_score", 0),
+                    )
+                ),
+                "discovery_score": safe_number(
+                    selected.get("discovery_score", 0)
+                ),
+                "recommended_action": safe_text(
+                    selected.get(
+                        "next_best_action",
+                        selected.get("recommended_action", ""),
+                    )
+                ),
+                "score_rationale": safe_text(
+                    selected.get(
+                        "commercial_hypothesis",
+                        selected.get("why_relevant", ""),
+                    )
+                ),
                 "linkedin_url": contacts["linkedin_url"],
                 "contact_headline": contacts["headline"],
-                "outreach_angle": contacts["suggested_outreach_angle"],
-                "professional_setting": str(selected.get("professional_setting") or ""),
-                "territory_profile_id": str(selected.get("territory_profile_id") or ""),
-                "vendor_profile_id": str(selected.get("vendor_profile_id") or ""),
-                "territory_region": str(selected.get("territory_region") or ""),
-                "territory_province": str(selected.get("territory_province") or ""),
-                "territory_city": str(selected.get("territory_city") or ""),
-                "territory_cluster_id": str(selected.get("territory_cluster_id") or ""),
-                "account_opportunity_score": float(
-                    selected.get("account_opportunity_score")
-                    or selected.get("discovery_score")
-                    or 0
+                "contact_outreach_angle": contacts["suggested_outreach_angle"],
+                "contact_relevance_score": contacts.get(
+                    "contact_relevance_score",
+                    pd.Series([0] * len(contacts)),
                 ),
-                "territory_status": str(selected.get("territory_status") or ""),
+                "contact_confidence": contacts.get(
+                    "contact_confidence",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "professional_role_signal": contacts.get(
+                    "professional_role_signal",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "location_match_evidence": contacts.get(
+                    "location_match_evidence",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "contact_match_rationale": contacts.get(
+                    "why_contact",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "outreach_angle": safe_text(
+                    selected.get("commercial_angle", "")
+                ),
+                "professional_setting": safe_text(
+                    selected.get("professional_setting", "")
+                ),
+                "account_type": safe_text(
+                    selected.get("account_type", "")
+                ),
+                "commercial_track": safe_text(
+                    selected.get("commercial_track", "")
+                ),
+                "territory_profile_id": safe_text(
+                    selected.get("territory_profile_id", "")
+                ),
+                "vendor_profile_id": safe_text(
+                    selected.get("vendor_profile_id", "")
+                ),
+                "territory_region": safe_text(
+                    selected.get("territory_region", "")
+                ),
+                "territory_province": safe_text(
+                    selected.get("territory_province", "")
+                ),
+                "territory_city": safe_text(
+                    selected.get("territory_city", "")
+                ),
+                "territory_cluster_id": safe_text(
+                    selected.get("territory_cluster_id", "")
+                ),
+                "territory_status": safe_text(
+                    selected.get("territory_status", "")
+                ),
+                "territory_location_basis": safe_text(
+                    selected.get("territory_location_basis", "")
+                ),
+                "account_opportunity_score": safe_number(
+                    selected.get(
+                        "account_opportunity_score",
+                        selected.get("discovery_score", 0),
+                    )
+                ),
+                "qualification_readiness_score": safe_number(
+                    selected.get("qualification_readiness_score", 0)
+                ),
+                "qualification_readiness_status": safe_text(
+                    selected.get("qualification_readiness_status", "")
+                ),
+                "qualification_readiness_evidence": safe_text(
+                    selected.get("qualification_readiness_evidence", "")
+                ),
+                "sales_motion": safe_text(
+                    selected.get("sales_motion", "")
+                ),
+                "buyer_access_status": safe_text(
+                    selected.get("buyer_access_status", "")
+                ),
+                "commercial_hypothesis": safe_text(
+                    selected.get("commercial_hypothesis", "")
+                ),
+                "commercial_angle": safe_text(
+                    selected.get("commercial_angle", "")
+                ),
+                "next_best_action": safe_text(
+                    selected.get("next_best_action", "")
+                ),
+                "qualification_questions": safe_text(
+                    selected.get("qualification_questions", "")
+                ),
+                "sales_evidence_gaps": safe_text(
+                    selected.get("sales_evidence_gaps", "")
+                ),
+                "commercial_risk_flags": safe_text(
+                    selected.get("commercial_risk_flags", "")
+                ),
+                "sales_intelligence_basis": safe_text(
+                    selected.get("sales_intelligence_basis", "")
+                ),
+                "observed_technology_axes": safe_text(
+                    selected.get("observed_technology_axes", "")
+                ),
+                "technology_validation_questions": safe_text(
+                    selected.get("technology_validation_questions", "")
+                ),
                 "contact_readiness_score": contacts.get(
                     "contact_readiness_score",
                     pd.Series([0] * len(contacts)),
@@ -1438,6 +1547,9 @@ else:
                 ),
                 "account_website": safe_text(
                     selected.get("account_website", "")
+                ),
+                "website_evidence_status": safe_text(
+                    selected.get("website_evidence_status", "")
                 ),
                 "public_phone": safe_text(
                     selected.get("public_phone", "")
@@ -1452,23 +1564,44 @@ else:
                     str(selected.get("public_contact_form", "")).strip().lower()
                     in {"true", "1", "yes"}
                 ),
+                "contact_channel_status": safe_text(
+                    selected.get("contact_channel_status", "")
+                ),
                 "enrichment_status": safe_text(
                     selected.get("enrichment_status", "")
                 ),
                 "account_data_completeness": safe_number(
                     selected.get("account_data_completeness", 0)
                 ),
-                "website_evidence_status": safe_text(
-                    selected.get("website_evidence_status", "")
+                "decision_maker_name": safe_text(
+                    selected.get("decision_maker_name", "")
+                ),
+                "decision_maker_headline": safe_text(
+                    selected.get("decision_maker_headline", "")
+                ),
+                "decision_maker_linkedin": safe_text(
+                    selected.get("decision_maker_linkedin", "")
+                ),
+                "decision_maker_confidence": safe_text(
+                    selected.get("decision_maker_confidence", "")
+                ),
+                "decision_maker_relevance_score": safe_number(
+                    selected.get("decision_maker_relevance_score", 0)
+                ),
+                "primary_evidence_url": safe_text(
+                    selected.get("source_url", "")
+                ),
+                "enrichment_evidence_url": safe_text(
+                    selected.get("enrichment_evidence_url", "")
                 ),
             }
         )
         st.download_button(
             "Download Adaptive Outreach Handoff",
             outreach_handoff.to_csv(index=False),
-            file_name="adaptive_outreach_handoff.csv",
+            file_name="adaptive_outreach_handoff_v2.csv",
             mime="text/csv",
-            help="Compatible with the Adaptive Outreach Intelligence portfolio application.",
+            help="Evidence-aware v2 handoff for the Adaptive Outreach Intelligence application.",
         )
 
         st.caption(
