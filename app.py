@@ -79,6 +79,31 @@ def safe_number(value, default: float = 0.0) -> float:
         return default
 
 
+def safe_filename(value: str) -> str:
+    return (
+        str(value or "account")
+        .strip()
+        .lower()
+        .replace(" ", "_")
+        .replace("/", "_")
+        .replace("\\", "_")
+    )
+
+
+def render_status_card(
+    label: str,
+    value,
+    caption: str = "",
+) -> None:
+    with st.container(border=True):
+        st.caption(label)
+        st.markdown(
+            f"**{safe_text(value, 'Not available')}**"
+        )
+        if caption:
+            st.caption(caption)
+
+
 def get_secret(name: str) -> str:
     try:
         value = st.secrets.get(name, "")
@@ -914,7 +939,7 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
         )
         st.rerun()
 
-st.subheader("Opportunity Workspace")
+st.subheader("Account Intelligence Workspace")
 
 selected_company = st.selectbox(
     "Select a candidate",
@@ -924,19 +949,30 @@ selected = ranked[ranked["company_name"].astype(str) == selected_company].iloc[0
 
 if territory_mode and "account_opportunity_score" in selected.index:
     w1, w2, w3, w4 = st.columns(4)
-    w1.metric("Account Opportunity", f"{selected['account_opportunity_score']:.1f}")
-    w2.metric(
-        "Evidence Confidence",
-        selected.get(
-            "account_evidence_confidence",
-            selected["confidence"],
-        ),
-    )
-    w3.metric("Territory Status", selected.get("territory_status", ""))
-    w4.metric(
-        "Province",
-        selected.get("territory_province", "") or "Needs validation",
-    )
+    with w1:
+        st.metric(
+            "Account Opportunity",
+            f"{selected['account_opportunity_score']:.1f}",
+        )
+    with w2:
+        render_status_card(
+            "Evidence Confidence",
+            selected.get(
+                "account_evidence_confidence",
+                selected["confidence"],
+            ),
+        )
+    with w3:
+        render_status_card(
+            "Territory Status",
+            selected.get("territory_status", ""),
+        )
+    with w4:
+        render_status_card(
+            "Province",
+            selected.get("territory_province", "")
+            or "Needs validation",
+        )
 else:
     w1, w2, w3 = st.columns(3)
     w1.metric("Discovery Score", f"{selected['discovery_score']:.1f}")
@@ -978,14 +1014,21 @@ sales_motion = safe_text(selected.get("sales_motion", ""))
 if sales_motion:
     st.subheader("Sales Intelligence")
     s1, s2 = st.columns(2)
-    s1.metric("Recommended Sales Motion", sales_motion)
-    s2.metric(
-        "Buyer Access",
-        safe_text(
-            selected.get("buyer_access_status", ""),
-            "Buyer access not established",
-        ),
-    )
+    with s1:
+        render_status_card(
+            "Sales Motion",
+            sales_motion,
+            "Recommended next commercial motion based on observed evidence.",
+        )
+    with s2:
+        render_status_card(
+            "Buyer Access",
+            safe_text(
+                selected.get("buyer_access_status", ""),
+                "Buyer access not established",
+            ),
+            "Publicly observed access path; decision authority may still require validation.",
+        )
 
     commercial_hypothesis = safe_text(
         selected.get("commercial_hypothesis", "")
@@ -1236,10 +1279,11 @@ else:
         "batch enrichment workflow."
     )
 
-st.subheader("Public Contact & LinkedIn Discovery")
+st.subheader("Public Contact & LinkedIn Validation")
 st.caption(
-    "Finds publicly indexed LinkedIn profile snippets for the selected account. "
-    "It does not log into LinkedIn, scrape private pages or claim unverified contact details."
+    "Finds and validates publicly indexed LinkedIn person-profile evidence for the selected account. "
+    "Weak homonyms are held back; the workflow does not log into LinkedIn, scrape private pages "
+    "or claim unverified contact details."
 )
 
 contact_key = f"linkedin_contacts::{selected_company}"
@@ -1378,7 +1422,6 @@ else:
             "contact_status",
             "suggested_outreach_angle",
             "linkedin_url",
-            "source_snippet",
         ]
         st.dataframe(
             contacts[[column for column in contact_columns if column in contacts.columns]],
@@ -1388,10 +1431,32 @@ else:
                 "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
             },
         )
+        with st.expander("View contact evidence excerpts", expanded=False):
+            evidence_columns = [
+                column
+                for column in [
+                    "person_name",
+                    "linkedin_url",
+                    "source_snippet",
+                ]
+                if column in contacts.columns
+            ]
+            st.dataframe(
+                contacts[evidence_columns],
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
+                },
+            )
+
         st.download_button(
             "Download Contact Shortlist",
             contacts.to_csv(index=False),
-            file_name="public_linkedin_contact_shortlist.csv",
+            file_name=(
+                f"{safe_filename(selected_company)}"
+                "_linkedin_contact_shortlist.csv"
+            ),
             mime="text/csv",
         )
 
@@ -1606,7 +1671,10 @@ else:
             st.download_button(
                 "Download ENGAGE Handoff v2",
                 outreach_handoff.to_csv(index=False),
-                file_name="adaptive_outreach_handoff_v2.csv",
+                file_name=(
+                    f"{safe_filename(selected_company)}"
+                    "_engage_handoff_v2.csv"
+                ),
                 mime="text/csv",
                 help="Evidence-aware v2 handoff for the Adaptive Outreach Intelligence application.",
                 use_container_width=True,
@@ -1732,7 +1800,7 @@ if st.button("Generate Evidence-Aware Brief"):
     else:
         st.json(brief)
 
-st.subheader("Continue the Workflow")
+st.subheader("Execution Handoff")
 st.caption(
     "Turn the current discovery research into a working commercial queue before exporting data."
 )
