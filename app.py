@@ -1283,9 +1283,27 @@ else:
 
             st.session_state[contact_key] = contacts
             if isinstance(contacts, pd.DataFrame) and not contacts.empty:
+                raw_profile_count = int(
+                    contacts.get(
+                        "raw_profile_count",
+                        pd.Series([len(contacts)]),
+                    ).iloc[0]
+                )
+                held_back_profile_count = int(
+                    contacts.get(
+                        "held_back_profile_count",
+                        pd.Series([0]),
+                    ).iloc[0]
+                )
                 st.session_state[contact_status_key] = (
-                    f"Found {len(contacts)} publicly indexed LinkedIn person profile"
-                    f"{'s' if len(contacts) != 1 else ''}."
+                    f"Found {len(contacts)} plausible LinkedIn profile match"
+                    f"{'es' if len(contacts) != 1 else ''}"
+                    + (
+                        f"; {held_back_profile_count} weak homonym/profile match"
+                        f"{'es' if held_back_profile_count != 1 else ''} held back."
+                        if held_back_profile_count
+                        else "."
+                    )
                 )
             else:
                 st.session_state[contact_status_key] = (
@@ -1353,6 +1371,8 @@ else:
             "contact_relevance_score",
             "contact_confidence",
             "matched_target_roles",
+            "professional_role_signal",
+            "location_match_evidence",
             "why_contact",
             "contact_readiness_score",
             "contact_status",
