@@ -17,6 +17,7 @@ from discovery_engine import (
     qualification_handoff,
     screen_candidates,
 )
+from milano_discovery import build_milano_discovery_plan
 from presets import PRESETS, get_preset, profile_id_for
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
@@ -92,7 +93,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-three-pass-milano-discovery"
+DEPLOYMENT_REVISION = "2026-10-01-milano-discovery-import-fix"
 
 
 def split_values(value: str) -> list[str]:
