@@ -88,6 +88,54 @@ def test_field_visit_priority_rewards_verified_high_fit_account():
     assert "scenario" in result["planning_value_status"].lower()
 
 
+def test_find_decision_maker_caps_field_allocation_at_prepare_first():
+    account = {
+        "company_name": "Brera Studio Medico",
+        "target_account_ready": True,
+        "account_opportunity_score": 85.9,
+        "qualification_readiness_score": 85,
+        "contact_readiness_score": 60,
+        "territory_location_confidence": 100,
+        "territory_location_basis": "Source-observed city",
+        "territory_scope_conflict": False,
+        "territory_status": "High-Priority Territory Account",
+        "sales_motion": "Find Decision Maker",
+        "buyer_access_status": "Business contact channel observed",
+        "source_snippet": "Medicina estetica e foto-ringiovanimento.",
+    }
+
+    result = build_field_sales_intelligence(account, DELEO_NORTH_ITALY)
+
+    assert result["visit_priority"] == "Contact / Prepare First"
+    assert result["visit_priority_score"] < 68
+    assert (
+        result["field_next_best_action"]
+        == "Contact decision-maker and qualify before allocating a field slot"
+    )
+    assert "decision-maker" in result["visit_priority_basis"]
+
+
+def test_ready_outreach_account_can_still_be_high_priority_visit():
+    account = {
+        "company_name": "Qualified Clinic",
+        "target_account_ready": True,
+        "account_opportunity_score": 90,
+        "qualification_readiness_score": 88,
+        "contact_readiness_score": 90,
+        "territory_location_confidence": 100,
+        "territory_location_basis": "Source-observed city",
+        "territory_scope_conflict": False,
+        "territory_status": "High-Priority Territory Account",
+        "sales_motion": "Ready for Qualification Outreach",
+        "buyer_access_status": "Decision maker + contact path observed",
+        "source_snippet": "HIFU e fractional laser.",
+    }
+
+    result = build_field_sales_intelligence(account, DELEO_NORTH_ITALY)
+
+    assert result["visit_priority"] in {"Visit Now", "High Priority Visit"}
+
+
 def test_field_visit_priority_penalizes_out_of_scope_account():
     account = {
         "company_name": "Out of Scope Clinic",
