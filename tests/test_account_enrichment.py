@@ -102,6 +102,63 @@ class AccountEnrichmentTests(unittest.TestCase):
         scored = score_account_web_result(result, account)
         self.assertLess(scored["website_match_score"], 50)
 
+
+    def test_trusted_discovery_domain_is_not_replaced_by_similar_cross_domain(self):
+        account = {
+            "company_name": "Brera Studio Medico",
+            "source_domain": "brerastudiomedico.it",
+            "source_url": "https://www.brerastudiomedico.it/medicina-estetica.php",
+            "source_title": "Brera Studio Medico | Medicina estetica",
+            "source_snippet": (
+                "VIA FATEBENEFRATELLI 4, MILANO Tel.02 65560938 "
+                "Medicina estetica Filler acido ialuronico"
+            ),
+            "account_identity_score": 90,
+            "territory_city": "Milano",
+            "territory_region": "Lombardia",
+        }
+        results = [
+            {
+                "title": "Istituto Clinico Brera | Medicina Estetica",
+                "content": "Centro medico a Milano, medicina estetica e chirurgia plastica.",
+                "url": "https://istitutoclinicobrera.it",
+            }
+        ]
+
+        summary = summarize_enrichment_results(
+            account,
+            results,
+            fit_terms=["medicina estetica", "chirurgia plastica"],
+        )
+
+        self.assertEqual(
+            summary["account_website"],
+            "https://www.brerastudiomedico.it",
+        )
+        self.assertIn(
+            "brerastudiomedico.it",
+            summary["enrichment_source_url"],
+        )
+        self.assertIn("65560938", summary["public_phone"])
+
+    def test_unproven_cross_domain_is_rejected_when_source_identity_is_trusted(self):
+        account = {
+            "company_name": "Brera Studio Medico",
+            "source_domain": "brerastudiomedico.it",
+            "source_url": "https://www.brerastudiomedico.it/medicina-estetica.php",
+            "account_identity_score": 90,
+            "territory_city": "Milano",
+        }
+        result = {
+            "title": "Istituto Clinico Brera",
+            "content": "Medicina estetica a Milano.",
+            "url": "https://istitutoclinicobrera.it",
+        }
+
+        scored = score_account_web_result(result, account)
+        self.assertEqual(scored["website_match_score"], 0)
+        self.assertIn("cross-domain identity", scored["website_match_reasons"])
+
     def test_qualification_readiness_separates_research_completeness_from_fit(self):
         result = assess_qualification_readiness(
             {
