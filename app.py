@@ -94,7 +94,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-relevant-evidence-snapshot"
+DEPLOYMENT_REVISION = "2026-10-01-account-identity-integrity"
 
 
 def split_values(value: str) -> list[str]:
@@ -1832,7 +1832,7 @@ else:
                     ).iloc[0]
                 )
                 st.session_state[contact_status_key] = (
-                    f"Found {len(contacts)} plausible LinkedIn profile match"
+                    f"Found {len(contacts)} account-linked LinkedIn profile match"
                     f"{'es' if len(contacts) != 1 else ''}"
                     + (
                         f"; {held_back_profile_count} weak homonym/profile match"
@@ -1843,7 +1843,7 @@ else:
                 )
             else:
                 st.session_state[contact_status_key] = (
-                    "No publicly indexed LinkedIn person profiles were found for this "
+                    "No sufficiently account-linked LinkedIn person profiles were found for this "
                     "account in the current search. This does not mean no LinkedIn profile exists."
                 )
 
