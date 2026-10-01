@@ -698,15 +698,30 @@ def discover_account_contacts(
         timeout=timeout,
     )
 
-    linkedin_contacts = discover_linkedin_contacts(
-        company_name=company_name,
-        country=country,
-        target_roles=target_roles,
-        api_key=api_key,
-        max_results=max_results,
-        timeout=timeout,
-        location_context=location_context,
-    )
+    authority_found = False
+    if not official_contacts.empty and "decision_authority_signal" in official_contacts.columns:
+        authority_found = bool(
+            official_contacts["decision_authority_signal"]
+            .fillna(False)
+            .astype(bool)
+            .any()
+        )
+
+    # Once the verified official domain explicitly identifies a decision authority,
+    # broad LinkedIn discovery is no longer required to establish buyer access.
+    # This keeps the workflow evidence-first and avoids unnecessary search credits.
+    if authority_found:
+        linkedin_contacts = pd.DataFrame()
+    else:
+        linkedin_contacts = discover_linkedin_contacts(
+            company_name=company_name,
+            country=country,
+            target_roles=target_roles,
+            api_key=api_key,
+            max_results=max_results,
+            timeout=timeout,
+            location_context=location_context,
+        )
 
     return _merge_contact_sources(
         official_contacts,
