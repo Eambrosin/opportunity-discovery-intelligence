@@ -40,6 +40,32 @@ def test_product_fit_hypothesis_uses_observed_evidence():
     assert result["product_fit_family"] != "Needs discovery"
 
 
+def test_generic_rejuvenation_signal_does_not_force_specific_product_family():
+    account = {
+        "company_name": "Brera Studio Medico",
+        "source_snippet": (
+            "Medicina estetica. Foto-ringiovanimento, filler acido ialuronico "
+            "e tossina botulinica."
+        ),
+        "observed_technology_axes": "",
+    }
+    result = product_fit_hypothesis(account, DELEO_NORTH_ITALY)
+    assert result["product_fit_family"] == "Needs discovery"
+    assert result["product_fit_score"] == 0
+    assert "Insufficient evidence" in result["product_fit_basis"]
+
+
+def test_specific_hifu_signal_can_support_early_product_hypothesis():
+    account = {
+        "company_name": "Example Clinic",
+        "source_snippet": "Trattamenti HIFU per lifting non invasivo.",
+        "observed_technology_axes": "",
+    }
+    result = product_fit_hypothesis(account, DELEO_NORTH_ITALY)
+    assert result["product_fit_family"].startswith("CONTOUR HIFU")
+    assert result["product_fit_score"] > 0
+
+
 def test_field_visit_priority_rewards_verified_high_fit_account():
     account = {
         "company_name": "High Fit Clinic",

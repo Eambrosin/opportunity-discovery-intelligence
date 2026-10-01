@@ -141,25 +141,51 @@ def _professional_role_signal(evidence: str) -> str:
     return ""
 
 
-def _company_match(evidence: str, company_name: str) -> bool:
+def _company_match_strength(
+    evidence: str,
+    company_name: str,
+) -> tuple[int, str]:
     company = _norm(company_name)
     if not company:
-        return False
+        return 0, ""
 
     evidence_norm = _norm(evidence)
     if company in evidence_norm:
-        return True
+        return 100, "exact company-name match"
 
+    generic_tokens = {
+        "clinic", "clinica", "cliniche",
+        "medical", "medico", "medica", "medici",
+        "center", "centre", "centro", "centri",
+        "studio", "istituto",
+        "medicina", "estetica", "aesthetic",
+        "dermatologia", "chirurgia",
+        "milano", "milan", "italia", "italy",
+    }
     meaningful = [
         token
         for token in company.split()
-        if len(token) >= 4 and token not in {"clinic", "medical", "center", "centre"}
+        if len(token) >= 4 and token not in generic_tokens
     ]
     if not meaningful:
-        return False
+        return 0, ""
 
-    required = min(2, len(meaningful))
-    return sum(token in evidence_norm for token in meaningful) >= required
+    matched = [token for token in meaningful if token in evidence_norm]
+
+    if len(meaningful) >= 2:
+        ratio = len(matched) / len(meaningful)
+        if len(matched) >= 2 and ratio >= 0.67:
+            return 80, "distinctive company-token match"
+
+    if len(meaningful) == 1 and matched:
+        return 40, "single distinctive company token only"
+
+    return 0, ""
+
+
+def _company_match(evidence: str, company_name: str) -> bool:
+    strength, _ = _company_match_strength(evidence, company_name)
+    return strength >= 70
 
 
 def _outreach_angle(matched_roles: list[str]) -> str:
@@ -193,7 +219,10 @@ def score_contact_result(
         current_identity_evidence,
         location_context,
     )
-    company = _company_match(evidence, company_name)
+    company_strength, company_reason = _company_match_strength(
+        evidence,
+        company_name,
+    )
     person_account = _looks_like_person_account(company_name)
     name_score, name_reason = _name_match_score(
         person_name,
@@ -203,6 +232,7 @@ def score_contact_result(
     reasons = []
     if person_account:
         score = name_score
+        account_identity_match = name_score >= 40
         if name_reason:
             reasons.append(name_reason)
 
@@ -217,9 +247,17 @@ def score_contact_result(
             score += 20
             reasons.append("location match")
     else:
-        score = 50 if company else 0
-        if company:
-            reasons.append("company match")
+        account_identity_match = company_strength >= 70
+        if company_strength >= 100:
+            score = 55
+        elif company_strength >= 70:
+            score = 45
+        else:
+            score = 0
+
+        if company_reason:
+            reasons.append(company_reason)
+
         if roles:
             score += 35
             reasons.append("target-role match")
@@ -247,6 +285,9 @@ def score_contact_result(
     return {
         "contact_relevance_score": score,
         "contact_confidence": confidence,
+        "account_identity_match": bool(account_identity_match),
+        "company_match_strength": int(company_strength if not person_account else 0),
+        "company_match_reason": company_reason if not person_account else "",
         "matched_target_roles": ", ".join(roles),
         "professional_role_signal": role_signal,
         "location_match_evidence": ", ".join(location_matches),
@@ -422,7 +463,8 @@ def discover_linkedin_contacts(
 
     raw_count = len(contacts)
     contacts = contacts[
-        contacts["contact_relevance_score"] >= 55
+        (contacts["contact_relevance_score"] >= 55)
+        & contacts["account_identity_match"].fillna(False).astype(bool)
     ].copy()
 
     if contacts.empty:

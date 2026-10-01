@@ -74,12 +74,15 @@ CONTENT_TITLE_PATTERNS = [
 
 GENERIC_SERVICE_TOKENS = {
     "a", "al", "alla", "con", "di", "del", "della", "e", "ed", "in",
-    "clinic", "clinica", "cliniche", "medical", "medico", "medica",
+    "clinic", "clinica", "cliniche", "medical", "medico", "medica", "medici",
     "centro", "centri", "studio", "istituto", "poliambulatorio", "poliambulatori",
-    "medicina", "estetica", "aesthetic", "dermatologia", "dermatologo",
+    "medicina", "estetica", "estetico", "estetici", "estetiche", "aesthetic",
+    "dermatologia", "dermatologo",
     "venereologia", "venereologico", "chirurgia", "chirurgo", "plastica",
     "plastico", "ricostruttiva", "rigenerativa", "laser", "trattamenti",
     "trattamento", "specialista", "specialisti", "surgery", "plastic",
+    "criolipolisi", "cryolipolysis", "hifu", "filler", "botox", "lifting",
+    "ringiovanimento", "rejuvenation", "body", "contouring", "skin",
     "dermatology", "medicine", "regenerative", "reconstructive",
     "milano", "milan", "monza", "bergamo", "brescia", "como", "varese",
     "verona", "vicenza", "padova", "padua", "treviso", "venezia", "venice",
