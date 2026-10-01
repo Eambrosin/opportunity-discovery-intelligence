@@ -92,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-field-sales-import-fix"
+DEPLOYMENT_REVISION = "2026-10-01-milan-deep-dive-ux"
 
 
 def split_values(value: str) -> list[str]:
@@ -340,6 +340,7 @@ with st.sidebar:
             scope_mode = st.radio(
                 "Territory coverage",
                 [
+                    "Milano deep dive",
                     "Priority clusters",
                     "Full territory",
                     "Custom clusters",
@@ -357,7 +358,22 @@ with st.sidebar:
                 if cluster["region"] in selected_territory_regions
             ]
 
-            if scope_mode == "Priority clusters":
+            if scope_mode == "Milano deep dive":
+                selected_cluster_ids = (
+                    ["lombardia_milano"]
+                    if "lombardia_milano" in region_cluster_ids
+                    else []
+                )
+                if selected_cluster_ids:
+                    st.caption(
+                        "Milano deep dive rotates multiple medical-aesthetics search angles "
+                        "inside the Milano cluster before expanding geographically."
+                    )
+                else:
+                    st.warning(
+                        "Milano deep dive requires Lombardia to remain selected in Regions in scope."
+                    )
+            elif scope_mode == "Priority clusters":
                 selected_cluster_ids = [
                     cid
                     for cid in priority_cluster_ids(territory)
@@ -417,8 +433,12 @@ with st.sidebar:
             )
 
         if territory_mode and territory:
-            default_queries = max(4, min(len(selected_cluster_ids), 18))
-            max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
+            if scope_mode == "Milano deep dive":
+                default_queries = 8
+                max_query_budget = 10
+            else:
+                default_queries = max(4, min(len(selected_cluster_ids), 18))
+                max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
         else:
             default_queries = 7 if "Medical Aesthetics" in preset_name else 6
             max_query_budget = 10
@@ -436,9 +456,23 @@ with st.sidebar:
         max_results = st.slider(
             "Results per query",
             min_value=3,
-            max_value=8,
-            value=5 if "Medical Aesthetics" in preset_name else 4,
+            max_value=10,
+            value=6 if "Medical Aesthetics" in preset_name else 4,
+            help=(
+                "For a focused Milano deep dive, 6–8 results per query can materially improve "
+                "account density. Broader settings consume more search credits."
+            ),
         )
+
+        if territory_mode and territory and len(selected_cluster_ids) == 1:
+            selected_label = territory_labels.get(
+                selected_cluster_ids[0],
+                selected_cluster_ids[0],
+            )
+            st.caption(
+                f"Deep-dive mode available for {selected_label}: increase Search breadth to rotate "
+                "multiple clinic/practitioner search angles within the same cluster."
+            )
 
     run = st.button("Discover & Rank", type="primary", use_container_width=True)
 
@@ -635,7 +669,7 @@ top = ranked[ranked["recommended_action"] != "Exclude"].copy()
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Raw Search Results", len(raw_ranked))
 m2.metric("Target Account Candidates", len(ranked))
-m3.metric("80+ Fit", int((top["discovery_score"] >= 80).sum()))
+m3.metric("80+ Discovery Fit", int((top["discovery_score"] >= 80).sum()))
 m4.metric(
     "High Confidence",
     int(
@@ -1100,6 +1134,66 @@ selected_company = st.selectbox(
 )
 selected = ranked[ranked["company_name"].astype(str) == selected_company].iloc[0]
 
+field_decision = safe_text(
+    selected.get("visit_priority", ""),
+    "Research before field allocation",
+)
+field_score = safe_number(selected.get("visit_priority_score", 0))
+field_city = safe_text(selected.get("territory_city", ""))
+field_province = safe_text(selected.get("territory_province", ""))
+field_location = field_city or field_province or "Location to verify"
+product_family = safe_text(
+    selected.get("product_fit_family", ""),
+    "Needs discovery",
+)
+product_status = safe_text(selected.get("product_fit_status", ""))
+field_next_action = safe_text(
+    selected.get("field_next_best_action", ""),
+    safe_text(selected.get("next_best_action", ""), "Complete qualification research"),
+)
+
+why_now_parts = []
+if safe_text(selected.get("account_evidence_confidence", "")) == "High":
+    why_now_parts.append("high evidence confidence")
+location_basis = safe_text(selected.get("territory_location_basis", ""))
+if location_basis.startswith("Source-observed"):
+    why_now_parts.append(f"{field_location} location verified")
+if safe_text(selected.get("qualification_readiness_status", "")) == "Ready for Qualification":
+    why_now_parts.append("research-ready")
+buyer_access = safe_text(selected.get("buyer_access_status", ""))
+if "contact path" in buyer_access.lower() or "business contact" in buyer_access.lower():
+    why_now_parts.append("public contact path")
+if safe_text(selected.get("professional_setting", "")):
+    why_now_parts.append("medical-setting evidence")
+
+why_now = " · ".join(why_now_parts[:4]) or "Complete the remaining evidence gaps before allocating field time."
+
+if product_family == "Needs discovery":
+    deleo_hypothesis = "No product-specific evidence yet — discover the clinic need before pitching a device."
+else:
+    deleo_hypothesis = (
+        f"{product_family}"
+        + (f" — {product_status}" if product_status else "")
+    )
+
+validation_focus = safe_text(
+    selected.get("technology_validation_questions", ""),
+    "Current treatment portfolio, installed technology, patient demand and investment timing",
+)
+
+with st.container(border=True):
+    st.markdown("### 🚗 Field Decision Brief")
+    fd1, fd2 = st.columns(2)
+    with fd1:
+        st.markdown(
+            f"**VISIT DECISION**  \\n{field_decision} · {field_location} · {field_score:.0f}/100"
+        )
+        st.markdown(f"**WHY NOW**  \\n{why_now}")
+        st.markdown(f"**NEXT ACTION**  \\n{field_next_action}")
+    with fd2:
+        st.markdown(f"**DELEO HYPOTHESIS**  \\n{deleo_hypothesis}")
+        st.markdown(f"**WHAT TO DISCOVER**  \\n{validation_focus}")
+
 if territory_mode and "account_opportunity_score" in selected.index:
     w1, w2, w3, w4, w5 = st.columns(5)
     with w1:
@@ -1272,10 +1366,21 @@ if field_visit_priority:
         )
     with f3:
         planning_value = safe_number(selected.get("planning_opportunity_value_eur", 0))
+        planning_status = safe_text(selected.get("planning_value_status", ""))
+        planning_label = (
+            "Qualified Opportunity Value"
+            if planning_status == "Account-specific value"
+            else "Planning Ticket Scenario"
+        )
+        planning_caption = (
+            safe_text(selected.get("planning_value_basis", ""))
+            if planning_status == "Account-specific value"
+            else "Commercial planning reference only — not an account valuation or forecast."
+        )
         render_status_card(
-            "Planning Opportunity Value",
+            planning_label,
             f"€{planning_value:,.0f}" if planning_value else "Not available",
-            safe_text(selected.get("planning_value_status", "")),
+            planning_caption,
         )
 
     product_basis = safe_text(selected.get("product_fit_basis", ""))
@@ -1356,12 +1461,13 @@ if source_url:
     st.markdown(f"**Primary evidence source:** {source_url}")
 
 if source_snippet:
-    evidence_preview = source_snippet[:650]
-    if len(source_snippet) > 650:
+    compact_evidence = " ".join(source_snippet.split())
+    evidence_preview = compact_evidence[:320]
+    if len(compact_evidence) > 320:
         evidence_preview += "…"
-    st.caption(evidence_preview)
+    st.markdown(f"**Evidence preview:** {evidence_preview}")
 
-    with st.expander("View full source evidence excerpt", expanded=False):
+    with st.expander("View raw source evidence excerpt", expanded=False):
         st.write(source_snippet)
 
 with st.expander("Explainable score"):
@@ -1384,8 +1490,9 @@ with st.expander("Explainable score"):
                 pass
         st.json(account_breakdown)
         st.caption(
-            "The territory score combines discovery fit with location evidence, professional "
-            "setting and observed technology/treatment evidence. It does not infer deal value."
+            "Account Opportunity measures account attractiveness using discovery fit, verified "
+            "territory evidence, professional setting and account-identity evidence. Product/technology "
+            "evidence is evaluated separately in Product Fit and Visit Priority."
         )
 
 st.subheader("Account Enrichment")
@@ -2064,24 +2171,47 @@ st.caption(
 
 queue_columns = [
     "company_name",
+    "visit_priority",
+    "visit_priority_score",
     "account_opportunity_score",
     "qualification_readiness_status",
-    "qualification_readiness_score",
-    "sales_motion",
-    "buyer_access_status",
+    "product_fit_family",
     "territory_province",
-    "next_best_action",
+    "territory_city",
+    "field_next_best_action",
 ]
-queue_view = ranked[
-    [column for column in queue_columns if column in ranked.columns]
-].head(10).copy()
+queue_view = ranked.copy()
+queue_sort_columns = [
+    column
+    for column in [
+        "visit_priority_score",
+        "qualification_readiness_score",
+        "account_opportunity_score",
+    ]
+    if column in queue_view.columns
+]
+if queue_sort_columns:
+    queue_view = queue_view.sort_values(
+        queue_sort_columns,
+        ascending=[False] * len(queue_sort_columns),
+    )
+queue_view = queue_view[
+    [column for column in queue_columns if column in queue_view.columns]
+].head(12).copy()
 
 if not queue_view.empty:
-    st.markdown("**Commercial action queue — top accounts**")
+    st.markdown("**Commercial action queue — field priority**")
     st.dataframe(
         queue_view,
         use_container_width=True,
         hide_index=True,
+    )
+    st.download_button(
+        "Download Field Action Queue",
+        queue_view.to_csv(index=False),
+        file_name="field_action_queue.csv",
+        mime="text/csv",
+        help="Operational shortlist sorted by current field-allocation priority.",
     )
 
 selected_motion = safe_text(
@@ -2099,11 +2229,15 @@ selected_readiness = safe_text(
 
 c1, c2, c3 = st.columns(3)
 c1.metric("Selected Account", selected_company)
-c2.metric("Current Sales Motion", selected_motion)
+c2.metric(
+    "Field Decision",
+    safe_text(selected.get("visit_priority", ""), selected_motion),
+)
 c3.metric("Qualification State", selected_readiness)
 
 st.info(
-    f"Next action for {selected_company}: {selected_next_action}"
+    f"Next action for {selected_company}: "
+    f"{safe_text(selected.get('field_next_best_action', ''), selected_next_action)}"
 )
 
 nav_a, nav_b = st.columns(2)

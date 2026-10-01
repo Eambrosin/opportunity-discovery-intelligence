@@ -57,6 +57,17 @@ class TerritoryIntelligenceTests(unittest.TestCase):
             any(city in joined for city in ["milano", "monza", "bergamo", "brescia"])
         )
 
+    def test_single_cluster_can_use_multiple_query_angles(self):
+        queries = build_territory_search_queries(
+            self.profile,
+            self.territory,
+            ["lombardia_milano"],
+            max_queries=6,
+        )
+        self.assertEqual(len(queries), 6)
+        self.assertTrue(all("milano" in query.lower() for query in queries))
+        self.assertEqual(len(set(queries)), 6)
+
     def test_source_observed_city_gets_high_location_confidence(self):
         row = {
             "company_name": "Example Clinic",
@@ -164,7 +175,7 @@ class TerritoryIntelligenceTests(unittest.TestCase):
         self.assertGreater(row["account_opportunity_score"], 0)
         self.assertNotIn("recommend", row["technology_validation_questions"].lower())
 
-    def test_no_technology_signal_gets_zero_technology_score(self):
+    def test_account_opportunity_does_not_require_product_technology_evidence(self):
         data = pd.DataFrame(
             [{
                 "company_name": "Example Clinic Milano",
@@ -187,11 +198,13 @@ class TerritoryIntelligenceTests(unittest.TestCase):
             self.territory,
             DELEO_NORTH_ITALY,
         )
-        breakdown = enriched.iloc[0]["account_opportunity_breakdown"]
-        self.assertEqual(
-            breakdown["technology_treatment_evidence"],
-            0.0,
-        )
+        row = enriched.iloc[0]
+        breakdown = row["account_opportunity_breakdown"]
+
+        self.assertNotIn("technology_treatment_evidence", breakdown)
+        self.assertIn("account_identity_evidence", breakdown)
+        self.assertEqual(row["technology_signal_count"], 0)
+        self.assertGreater(row["account_opportunity_score"], 0)
 
     def test_enrichment_evidence_can_add_technology_signal(self):
         data = pd.DataFrame(
