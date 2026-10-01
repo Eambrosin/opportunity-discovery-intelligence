@@ -152,3 +152,29 @@ def test_field_visit_priority_penalizes_out_of_scope_account():
     result = build_field_sales_intelligence(account, DELEO_NORTH_ITALY)
     assert result["visit_priority_score"] < 68
     assert result["visit_priority"] in {"Contact / Prepare First", "Research Before Visit"}
+
+
+def test_verified_decision_maker_personalizes_field_next_action():
+    account = {
+        "company_name": "Brera Studio Medico",
+        "target_account_ready": True,
+        "account_opportunity_score": 85.9,
+        "qualification_readiness_score": 95,
+        "contact_readiness_score": 100,
+        "territory_location_confidence": 100,
+        "territory_location_basis": "Source-observed city",
+        "territory_scope_conflict": False,
+        "territory_status": "High-Priority Territory Account",
+        "sales_motion": "Ready for Qualification Outreach",
+        "buyer_access_status": "Decision maker + contact path observed",
+        "decision_maker_verified": True,
+        "decision_maker_name": "Fabrizio Cecchini",
+        "decision_maker_headline": "Direttore Sanitario",
+        "source_snippet": "Medicina estetica e trattamenti non chirurgici.",
+    }
+
+    result = build_field_sales_intelligence(account, DELEO_NORTH_ITALY)
+
+    assert result["visit_priority"] in {"Visit Now", "High Priority Visit"}
+    assert "Fabrizio Cecchini" in result["field_next_best_action"]
+    assert "Direttore Sanitario" in result["field_next_best_action"]
