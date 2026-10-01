@@ -396,6 +396,18 @@ def visit_priority(
         score -= 8
         penalties.append("location not source-verified")
 
+    sales_motion = _text(account.get("sales_motion"))
+    if sales_motion == "Find Decision Maker":
+        score = min(score, 67.9)
+        penalties.append("decision-maker or strong entry point not yet established")
+    elif sales_motion in {
+        "Research Identity",
+        "Validate Fit Before Outreach",
+        "Research & Enrich",
+    }:
+        score = min(score, 51.9)
+        penalties.append("commercial research not ready for field allocation")
+
     score = round(max(0.0, min(100.0, score)), 1)
 
     if score >= 82:
