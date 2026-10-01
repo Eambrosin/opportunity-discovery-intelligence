@@ -21,9 +21,49 @@ from presets import PRESETS, get_preset, profile_id_for
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
     build_field_sales_intelligence,
-    revenue_execution_capacity,
     revenue_target_scenarios,
 )
+
+try:
+    from field_sales_intelligence import revenue_execution_capacity
+except ImportError:
+    def revenue_execution_capacity(
+        vendor_profile,
+        *,
+        field_days_per_month,
+        qualified_visits_per_day,
+    ):
+        """Backward-compatible fallback for stale Streamlit module caches."""
+        scenarios = revenue_target_scenarios(vendor_profile)
+        if scenarios.empty:
+            return pd.DataFrame()
+
+        field_days = max(0, int(field_days_per_month))
+        visits_per_day = max(0.0, float(qualified_visits_per_day))
+        visits_per_month = field_days * visits_per_day
+
+        result = scenarios.copy()
+        result["field_days_per_month"] = field_days
+        result["qualified_visits_per_day"] = visits_per_day
+        result["qualified_visits_per_month"] = round(visits_per_month, 1)
+
+        if visits_per_month <= 0:
+            result["required_visit_to_sale_conversion_pct"] = 0.0
+            result["visits_per_required_sale"] = 0.0
+            return result
+
+        exact_units_per_month = (
+            result["annual_target_eur"]
+            / result["average_ticket_eur"]
+            / 12
+        )
+        result["required_visit_to_sale_conversion_pct"] = (
+            exact_units_per_month / visits_per_month * 100
+        ).round(2)
+        result["visits_per_required_sale"] = (
+            visits_per_month / exact_units_per_month
+        ).round(1)
+        return result
 from territory_intelligence import (
     apply_territory_intelligence,
     build_territory_search_queries,
@@ -52,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-field-sales-intelligence-1"
+DEPLOYMENT_REVISION = "2026-10-01-field-sales-import-fix"
 
 
 def split_values(value: str) -> list[str]:

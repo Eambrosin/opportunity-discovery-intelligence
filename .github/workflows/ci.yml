@@ -28,7 +28,7 @@ jobs:
 
       - name: Smoke-test application imports
         run: |
-          python -c "from account_enrichment import assess_qualification_readiness, enrich_account; from sales_intelligence import build_sales_intelligence; from field_sales_intelligence import build_field_sales_intelligence, revenue_target_scenarios; from discovery_engine import qualification_handoff"
+          python -c "from account_enrichment import assess_qualification_readiness, enrich_account; from sales_intelligence import build_sales_intelligence; from field_sales_intelligence import build_field_sales_intelligence, revenue_target_scenarios, revenue_execution_capacity; from discovery_engine import qualification_handoff"
 
       - name: Run discovery-engine tests
         run: |
