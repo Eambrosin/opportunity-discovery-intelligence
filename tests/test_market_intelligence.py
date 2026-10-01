@@ -11,7 +11,7 @@ from web_discovery import _account_identity, _company_from_title, consolidate_co
 class MarketIntelligenceTests(unittest.TestCase):
 
     def test_medical_aesthetics_preset_contains_local_market_language(self):
-        preset = get_preset("Medical Aesthetics — Clinics & Practitioners (Italy)")
+        preset = get_preset("Medical Aesthetics — DELEO Test")
         self.assertEqual(preset["industry"], "Medical Aesthetics")
         self.assertIn("Italy", preset["countries"])
         self.assertIn("clinica medicina estetica", preset["search_archetypes"].lower())
