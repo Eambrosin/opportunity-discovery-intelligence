@@ -21,6 +21,7 @@ from presets import PRESETS, get_preset, profile_id_for
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
     build_field_sales_intelligence,
+    revenue_execution_capacity,
     revenue_target_scenarios,
 )
 from territory_intelligence import (
@@ -712,6 +713,68 @@ if territory_mode and territory and "account_opportunity_score" in ranked.column
                     "qualified clinic visits/day when account density and scheduling allow it. "
                     "Outside Milano, daily visit volume should fall as travel time increases."
                 )
+
+            with st.expander("€1M Revenue Execution Model", expanded=False):
+                st.caption(
+                    "Capacity planning only — not a forecast. Adjust the field rhythm to see "
+                    "the visit-to-sale conversion mathematically required by each average-ticket scenario."
+                )
+                rc1, rc2 = st.columns(2)
+                with rc1:
+                    field_days_per_month = st.slider(
+                        "Field days / month",
+                        min_value=10,
+                        max_value=22,
+                        value=18,
+                        step=1,
+                        key="revenue_capacity_field_days",
+                    )
+                with rc2:
+                    qualified_visits_per_day = st.slider(
+                        "Qualified clinic visits / field day",
+                        min_value=2.0,
+                        max_value=7.0,
+                        value=6.5,
+                        step=0.5,
+                        key="revenue_capacity_visits_day",
+                        help=(
+                            "6–7 can represent a dense Milano day. Reduce this assumption "
+                            "when planning dispersed provinces."
+                        ),
+                    )
+
+                execution_model = revenue_execution_capacity(
+                    vendor_profile,
+                    field_days_per_month=field_days_per_month,
+                    qualified_visits_per_day=qualified_visits_per_day,
+                )
+                if not execution_model.empty:
+                    execution_view = execution_model[
+                        [
+                            "average_ticket_eur",
+                            "units_per_month",
+                            "qualified_visits_per_month",
+                            "required_visit_to_sale_conversion_pct",
+                            "visits_per_required_sale",
+                        ]
+                    ].rename(
+                        columns={
+                            "average_ticket_eur": "Average Ticket (€)",
+                            "units_per_month": "Units / Month",
+                            "qualified_visits_per_month": "Qualified Visits / Month",
+                            "required_visit_to_sale_conversion_pct": "Required Visit→Sale (%)",
+                            "visits_per_required_sale": "Visits / Required Sale",
+                        }
+                    )
+                    st.dataframe(
+                        execution_view,
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+                    st.caption(
+                        "The model deliberately separates activity capacity from forecast probability. "
+                        "Real conversion should be learned from field results and updated over time."
+                    )
 
     territory_metrics = territory_summary(ranked, territory)
 
