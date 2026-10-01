@@ -235,25 +235,27 @@ def _location_match(evidence: str, location_context: str) -> list[str]:
 def _professional_role_signal(evidence: str) -> str:
     text = _norm(evidence)
     signals = [
-        "chirurgo estetico",
-        "chirurgo plastico",
-        "plastic surgeon",
-        "aesthetic surgeon",
-        "medico estetico",
-        "aesthetic physician",
-        "dermatologo",
-        "dermatologist",
-        "medical director",
-        "direttore sanitario",
-        "titolare",
-        "owner",
-        "founder",
-        "clinic manager",
-        "practice manager",
+        ("direttore sanitario", "direttore sanitario"),
+        ("medical director", "medical director"),
+        ("titolare", "titolare"),
+        ("owner", "owner"),
+        ("founder", "founder"),
+        ("chirurgo estetico", "chirurgo estetico"),
+        ("chirurgo plastico", "chirurgo plastico"),
+        ("plastic surgeon", "plastic surgeon"),
+        ("aesthetic surgeon", "aesthetic surgeon"),
+        ("specialista in medicina estetica", "medico estetico"),
+        ("medico estetico", "medico estetico"),
+        ("aesthetic physician", "aesthetic physician"),
+        ("specialista in dermatologia", "dermatologo"),
+        ("dermatologo", "dermatologo"),
+        ("dermatologist", "dermatologist"),
+        ("clinic manager", "clinic manager"),
+        ("practice manager", "practice manager"),
     ]
-    for signal in signals:
-        if signal in text:
-            return signal
+    for phrase, canonical in signals:
+        if phrase in text:
+            return canonical
     return ""
 
 
