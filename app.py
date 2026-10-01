@@ -92,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-field-ready-account-preparation"
+DEPLOYMENT_REVISION = "2026-10-01-three-pass-milano-discovery"
 
 
 def split_values(value: str) -> list[str]:
@@ -133,27 +133,6 @@ def safe_filename(value: str) -> str:
         .replace("/", "_")
         .replace("\\", "_")
     )
-
-
-MILANO_DEEP_DIVE_QUERY_TEMPLATES = [
-    # Baseline city-wide discovery, followed by deliberately different microzones
-    # to reduce overlap between Tavily result sets.
-    "clinica medicina estetica Milano Lombardia Italy sito ufficiale",
-    "medico estetico studio Milano Centro Lombardia Italy sito ufficiale",
-    "dermatologo medicina estetica Porta Venezia Milano Lombardia Italy sito ufficiale",
-    "chirurgo plastico estetico Brera Milano Lombardia Italy sito ufficiale",
-    "poliambulatorio medicina estetica Porta Nuova Milano Lombardia Italy sito ufficiale",
-    "laser estetico dermatologia CityLife Milano Lombardia Italy sito ufficiale",
-    "criolipolisi medico estetico Porta Romana Milano Lombardia Italy sito ufficiale",
-    "body contouring medicina estetica Navigli Milano Lombardia Italy sito ufficiale",
-    "HIFU medicina estetica Città Studi Milano Lombardia Italy sito ufficiale",
-    "skin rejuvenation medico estetico Isola Milano Lombardia Italy sito ufficiale",
-]
-
-
-def build_milano_deep_dive_queries(max_queries: int) -> list[str]:
-    budget = max(1, min(int(max_queries), len(MILANO_DEEP_DIVE_QUERY_TEMPLATES)))
-    return MILANO_DEEP_DIVE_QUERY_TEMPLATES[:budget]
 
 
 def render_status_card(
@@ -535,8 +514,10 @@ if run:
                 if not selected_cluster_ids:
                     st.warning("Select at least one territory cluster before running discovery.")
                     st.stop()
+                query_plan = []
                 if scope_mode == "Milano deep dive":
-                    queries = build_milano_deep_dive_queries(query_budget)
+                    query_plan = build_milano_discovery_plan(query_budget)
+                    queries = [item.query for item in query_plan]
                 else:
                     queries = build_territory_search_queries(
                         profile=profile,
@@ -565,7 +546,24 @@ if run:
                     f"budget of {query_budget}. Review the search profile before interpreting coverage."
                 )
 
-            st.code("\n".join(queries))
+            if territory_mode and territory and scope_mode == "Milano deep dive":
+                plan_df = pd.DataFrame(
+                    [
+                        {
+                            "Pass": item.stage,
+                            "Purpose": item.objective,
+                            "Query": item.query,
+                        }
+                        for item in query_plan
+                    ]
+                )
+                st.dataframe(
+                    plan_df,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.code("\n".join(queries))
 
             source_df = discover_with_tavily(
                 queries=queries,
@@ -581,12 +579,26 @@ if run:
                     "pinterest.com",
                 ],
             )
+
+            stage_map = {}
+            if territory_mode and territory and scope_mode == "Milano deep dive":
+                stage_map = {
+                    item.query: item.stage
+                    for item in query_plan
+                }
+                source_df["discovery_pass"] = (
+                    source_df.get("discovery_query", pd.Series(dtype=str))
+                    .map(stage_map)
+                    .fillna("Unclassified")
+                )
+
             st.session_state.discovery_run_diagnostics = {
                 "requested_queries": int(query_budget),
                 "generated_queries": int(len(queries)),
                 "results_per_query": int(max_results),
                 "unique_raw_results": int(len(source_df)),
                 "scope_mode": scope_mode if territory_mode and territory else "",
+                "query_stage_map": stage_map,
             }
 
         ranked_result = screen_candidates(source_df, profile)
@@ -753,8 +765,49 @@ if run_diag and source_mode == "Public web (Tavily)":
         st.caption(
             "Unique Result Yield shows how much query overlap exists before qualification. "
             "Target Retention shows how much of the unique research set survives account screening. "
-            "Low yield suggests broader/more local search angles; low retention suggests noisy search results."
+            "Low yield suggests broader search angles; low retention suggests noisy discovery inputs."
         )
+
+        if (
+            run_diag.get("scope_mode") == "Milano deep dive"
+            and "discovery_pass" in raw_ranked.columns
+        ):
+            pass_order = [
+                "Market Core",
+                "Technology / Treatment",
+                "Geographic Coverage",
+                "Unclassified",
+            ]
+            pass_rows = []
+            for discovery_pass in pass_order:
+                raw_pass = raw_ranked[
+                    raw_ranked["discovery_pass"].astype(str) == discovery_pass
+                ]
+                if raw_pass.empty:
+                    continue
+                target_pass = ranked[
+                    ranked["discovery_pass"].astype(str) == discovery_pass
+                ]
+                pass_rows.append(
+                    {
+                        "Pass": discovery_pass,
+                        "First-seen unique results": len(raw_pass),
+                        "Target accounts": len(target_pass),
+                        "Retention": (
+                            f"{(len(target_pass) / len(raw_pass) * 100):.0f}%"
+                            if len(raw_pass)
+                            else "0%"
+                        ),
+                    }
+                )
+
+            if pass_rows:
+                st.markdown("**Three-pass contribution**")
+                st.dataframe(
+                    pd.DataFrame(pass_rows),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
 if not held_back.empty:
     with st.expander(
