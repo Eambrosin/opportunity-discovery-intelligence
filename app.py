@@ -19,6 +19,10 @@ from discovery_engine import (
 )
 from presets import PRESETS, get_preset, profile_id_for
 from sales_intelligence import build_sales_intelligence
+from field_sales_intelligence import (
+    build_field_sales_intelligence,
+    revenue_target_scenarios,
+)
 from territory_intelligence import (
     apply_territory_intelligence,
     build_territory_search_queries,
@@ -47,7 +51,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-09-29-sales-intelligence-2"
+DEPLOYMENT_REVISION = "2026-10-01-field-sales-intelligence-1"
 
 
 def split_values(value: str) -> list[str]:
@@ -523,6 +527,18 @@ if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
     for sales_column in sales_rows.columns:
         raw_ranked[sales_column] = sales_rows[sales_column]
 
+    field_sales_rows = raw_ranked.apply(
+        lambda row: pd.Series(
+            build_field_sales_intelligence(
+                row.to_dict(),
+                vendor_profile=vendor_profile,
+            )
+        ),
+        axis=1,
+    )
+    for field_sales_column in field_sales_rows.columns:
+        raw_ranked[field_sales_column] = field_sales_rows[field_sales_column]
+
     st.session_state.ranked_candidates = raw_ranked
 
 if raw_ranked.empty:
@@ -668,6 +684,35 @@ if "qualification_readiness_status" in ranked.columns:
 
 if territory_mode and territory and "account_opportunity_score" in ranked.columns:
     st.subheader("Territory Command Center")
+
+    if vendor_profile:
+        target_scenarios = revenue_target_scenarios(vendor_profile)
+        if not target_scenarios.empty:
+            annual_target = int(target_scenarios["annual_target_eur"].iloc[0])
+            st.markdown(
+                f"**Revenue planning benchmark:** €{annual_target:,.0f} annual target"
+            )
+            st.dataframe(
+                target_scenarios.rename(
+                    columns={
+                        "average_ticket_eur": "Average Ticket (€)",
+                        "units_per_year": "Units / Year",
+                        "units_per_month": "Units / Month",
+                        "annual_target_eur": "Annual Target (€)",
+                    }
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+            field_cfg = vendor_profile.get("field_execution", {})
+            milan_visits = field_cfg.get("milan_target_visits_per_day", [])
+            if len(milan_visits) >= 2:
+                st.caption(
+                    f"Milano planning assumption: {milan_visits[0]}–{milan_visits[1]} "
+                    "qualified clinic visits/day when account density and scheduling allow it. "
+                    "Outside Milano, daily visit volume should fall as travel time increases."
+                )
+
     territory_metrics = territory_summary(ranked, territory)
 
     t1, t2, t3, t4, t5, t6 = st.columns(6)
@@ -782,6 +827,11 @@ display_columns = [
     "qualification_readiness_score",
     "sales_motion",
     "buyer_access_status",
+    "visit_priority",
+    "visit_priority_score",
+    "product_fit_family",
+    "product_fit_status",
+    "planning_opportunity_value_eur",
     "territory_province",
     "territory_city",
     "account_type",
@@ -948,7 +998,7 @@ selected_company = st.selectbox(
 selected = ranked[ranked["company_name"].astype(str) == selected_company].iloc[0]
 
 if territory_mode and "account_opportunity_score" in selected.index:
-    w1, w2, w3, w4 = st.columns(4)
+    w1, w2, w3, w4, w5 = st.columns(5)
     with w1:
         st.metric(
             "Account Opportunity",
@@ -968,6 +1018,13 @@ if territory_mode and "account_opportunity_score" in selected.index:
             selected.get("territory_status", ""),
         )
     with w4:
+        render_status_card(
+            "Visit Priority",
+            selected.get("visit_priority", "")
+            or "Needs validation",
+            f"{safe_number(selected.get('visit_priority_score', 0)):.0f}/100",
+        )
+    with w5:
         render_status_card(
             "Province",
             selected.get("territory_province", "")
@@ -1091,6 +1148,64 @@ if sales_motion:
             selected.get("sales_intelligence_basis", ""),
             "Observed public evidence + deterministic qualification logic; "
             "no purchase intent or win probability inferred.",
+        )
+    )
+
+field_visit_priority = safe_text(selected.get("visit_priority", ""))
+if field_visit_priority:
+    st.subheader("Field Sales Intelligence")
+    f1, f2, f3 = st.columns(3)
+    with f1:
+        render_status_card(
+            "Visit Priority",
+            field_visit_priority,
+            f"{safe_number(selected.get('visit_priority_score', 0)):.0f}/100 field-allocation score",
+        )
+    with f2:
+        render_status_card(
+            "Product-Fit Hypothesis",
+            safe_text(selected.get("product_fit_family", ""), "Needs discovery"),
+            safe_text(selected.get("product_fit_status", "")),
+        )
+    with f3:
+        planning_value = safe_number(selected.get("planning_opportunity_value_eur", 0))
+        render_status_card(
+            "Planning Opportunity Value",
+            f"€{planning_value:,.0f}" if planning_value else "Not available",
+            safe_text(selected.get("planning_value_status", "")),
+        )
+
+    product_basis = safe_text(selected.get("product_fit_basis", ""))
+    if product_basis:
+        st.markdown(f"**Why this product family is worth testing:** {product_basis}")
+
+    field_objective = safe_text(selected.get("field_visit_objective", ""))
+    if field_objective:
+        st.markdown(f"**Visit objective:** {field_objective}")
+
+    field_next = safe_text(selected.get("field_next_best_action", ""))
+    if field_next:
+        st.markdown(f"**Field next best action:** {field_next}")
+
+    field_questions = safe_text(selected.get("field_opening_questions", ""))
+    if field_questions:
+        questions = [
+            item.strip()
+            for item in field_questions.split(" | ")
+            if item.strip()
+        ]
+        with st.expander("Questions to ask in the clinic", expanded=True):
+            st.caption(
+                "The data gets you to the right door. These questions are designed to discover "
+                "the real need before proposing a solution."
+            )
+            for question in questions:
+                st.markdown(f"- {question}")
+
+    st.caption(
+        safe_text(
+            selected.get("field_sales_basis", ""),
+            "Evidence-aware field-sales planning; no purchase intent or win probability inferred.",
         )
     )
 
@@ -1603,6 +1718,45 @@ else:
                 ),
                 "observed_technology_axes": safe_text(
                     selected.get("observed_technology_axes", "")
+                ),
+                "product_fit_family": safe_text(
+                    selected.get("product_fit_family", "")
+                ),
+                "product_fit_score": safe_number(
+                    selected.get("product_fit_score", 0)
+                ),
+                "product_fit_status": safe_text(
+                    selected.get("product_fit_status", "")
+                ),
+                "product_fit_basis": safe_text(
+                    selected.get("product_fit_basis", "")
+                ),
+                "planning_opportunity_value_eur": safe_number(
+                    selected.get("planning_opportunity_value_eur", 0)
+                ),
+                "planning_value_status": safe_text(
+                    selected.get("planning_value_status", "")
+                ),
+                "planning_value_basis": safe_text(
+                    selected.get("planning_value_basis", "")
+                ),
+                "visit_priority": safe_text(
+                    selected.get("visit_priority", "")
+                ),
+                "visit_priority_score": safe_number(
+                    selected.get("visit_priority_score", 0)
+                ),
+                "visit_priority_basis": safe_text(
+                    selected.get("visit_priority_basis", "")
+                ),
+                "field_visit_objective": safe_text(
+                    selected.get("field_visit_objective", "")
+                ),
+                "field_opening_questions": safe_text(
+                    selected.get("field_opening_questions", "")
+                ),
+                "field_next_best_action": safe_text(
+                    selected.get("field_next_best_action", "")
                 ),
                 "technology_validation_questions": safe_text(
                     selected.get("technology_validation_questions", "")
