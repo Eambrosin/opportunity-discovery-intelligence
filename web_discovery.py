@@ -66,6 +66,9 @@ CONTENT_TITLE_PATTERNS = [
     r"^download\b",
     r"^trova il\b",
     r"^trova la\b",
+    r"^trova medico$",
+    r"^verificare che\b",
+    r"^category filter$",
     r"^listaxml$",
 ]
 
@@ -80,8 +83,8 @@ GENERIC_SERVICE_TOKENS = {
     "dermatology", "medicine", "regenerative", "reconstructive",
     "milano", "milan", "monza", "bergamo", "brescia", "como", "varese",
     "verona", "vicenza", "padova", "padua", "treviso", "venezia", "venice",
-    "trento", "bolzano", "bozen", "roma", "rome", "italia", "italy",
-    "lugano", "moritz",
+    "trento", "bolzano", "bozen", "roma", "rome", "caserta", "italia", "italy",
+    "lugano", "moritz", "trova",
 }
 
 
@@ -213,6 +216,8 @@ def _looks_like_person_name(value: str) -> bool:
         return False
     if lowered & PERSON_NAME_STOPWORDS:
         return False
+    if text.count(",") >= 2 or _looks_like_location_list(text):
+        return False
 
     capitalized = sum(
         1
@@ -282,6 +287,21 @@ def _title_parts(title: str) -> list[str]:
     return [part.strip() for part in parts if 2 <= len(part.strip()) <= 90]
 
 
+LOCATION_LABEL_TOKENS = {
+    "milano", "milan", "roma", "rome", "caserta", "monza", "bergamo",
+    "brescia", "como", "varese", "verona", "vicenza", "padova", "padua",
+    "treviso", "venezia", "venice", "trento", "bolzano", "bozen",
+}
+
+
+def _looks_like_location_list(value: str) -> bool:
+    text = " ".join(str(value or "").strip().lower().split())
+    if "," not in text:
+        return False
+    tokens = set(re.findall(r"[a-zà-ÿ]+", text))
+    return len(tokens & LOCATION_LABEL_TOKENS) >= 2
+
+
 def _compact_identity(value: str) -> str:
     return re.sub(r"[^a-z0-9à-ÿ]+", "", str(value or "").lower())
 
@@ -311,6 +331,7 @@ def _company_from_title(
     non_content_parts = [
         part for part in parts
         if not _looks_like_content_title(part)
+        and not _looks_like_location_list(part)
     ]
 
     person_like_parts = [

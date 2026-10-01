@@ -92,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-milano-coverage-quality"
+DEPLOYMENT_REVISION = "2026-10-01-field-ready-account-preparation"
 
 
 def split_values(value: str) -> list[str]:
@@ -1110,13 +1110,17 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
 
     enrichment_tavily_key = server_tavily_key or tavily_key
 
-    batch_max = min(5, max(1, len(ranked)))
+    batch_max = min(10, max(1, len(ranked)))
     batch_count = st.slider(
-        "Accounts to enrich",
+        "Accounts to prepare",
         min_value=1,
         max_value=batch_max,
-        value=min(3, batch_max),
+        value=min(5, batch_max),
         key="batch_enrichment_count",
+        help=(
+            "Prepares the highest-priority field accounts by enriching public website, "
+            "contact and fit evidence. Larger batches consume more Tavily search credits."
+        ),
     )
 
     if not enrichment_tavily_key:
@@ -1124,7 +1128,7 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
             "Configure TAVILY_API_KEY to enable Account Enrichment."
         )
     elif st.button(
-        "Enrich Top Accounts",
+        "Prepare Top Field Accounts",
         key="enrich_top_accounts",
     ):
         enriched_count = 0
@@ -1138,16 +1142,21 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
             else "discovery_score"
         )
 
+        sort_columns = []
+        sort_ascending = []
+        if "visit_priority_score" in batch_accounts.columns:
+            sort_columns.append("visit_priority_score")
+            sort_ascending.append(False)
+        sort_columns.append(opportunity_column)
+        sort_ascending.append(False)
         if "qualification_readiness_score" in batch_accounts.columns:
-            batch_accounts = batch_accounts.sort_values(
-                [opportunity_column, "qualification_readiness_score"],
-                ascending=[False, True],
-            )
-        else:
-            batch_accounts = batch_accounts.sort_values(
-                opportunity_column,
-                ascending=False,
-            )
+            sort_columns.append("qualification_readiness_score")
+            sort_ascending.append(True)
+
+        batch_accounts = batch_accounts.sort_values(
+            sort_columns,
+            ascending=sort_ascending,
+        )
 
         if "enrichment_status" in batch_accounts.columns:
             not_enriched = ~batch_accounts[
@@ -1164,7 +1173,7 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
         ):
             account_name = str(account_row.get("company_name", ""))
             status_box.write(
-                f"Enriching {position}/{batch_count}: {account_name}"
+                f"Preparing field account {position}/{len(batch_accounts)}: {account_name}"
             )
             try:
                 enrichment = enrich_account(
@@ -1190,10 +1199,14 @@ with st.expander("Account Enrichment — Top Accounts", expanded=False):
 
             progress.progress(position / batch_count)
 
-        status_box.success(
-            f"Account enrichment completed for {enriched_count}/{batch_count} accounts."
+        st.session_state["field_preparation_notice"] = (
+            f"Prepared {enriched_count}/{len(batch_accounts)} field accounts. "
+            "Qualification readiness and field priority have been recalculated."
         )
         st.rerun()
+
+if st.session_state.get("field_preparation_notice"):
+    st.success(st.session_state.pop("field_preparation_notice"))
 
 st.subheader("Account Intelligence Workspace")
 

@@ -17,3 +17,7 @@ def test_honorific_parser_stops_before_title_fragment():
 
 def test_valid_two_word_person_name_remains_supported():
     assert _looks_like_person_name("Paolo Montemurro") is True
+
+
+def test_location_list_is_not_a_person_name():
+    assert _looks_like_person_name("Milano, Roma, Caserta") is False
