@@ -3,8 +3,12 @@ from unittest.mock import Mock, patch
 
 from contact_discovery import (
     _account_linkedin_queries,
+    _extract_honorific_names,
+    _merge_contact_sources,
     _search_linkedin_people,
+    discover_account_contacts,
     discover_linkedin_contacts,
+    discover_official_site_contacts,
     score_contact_result,
 )
 
@@ -116,6 +120,133 @@ class ContactDiscoveryTests(unittest.TestCase):
         self.assertTrue(correct["location_match_evidence"])
         self.assertLess(scientist["contact_relevance_score"], 55)
 
+
+    def test_extracts_named_people_from_official_site_text(self):
+        names = _extract_honorific_names(
+            "Il Dott. Fabrizio Cecchini è il direttore sanitario. "
+            "Dott. Maria Teresa Grecchi medico chirurgo specialista in medicina estetica."
+        )
+        self.assertIn("Fabrizio Cecchini", names)
+        self.assertIn("Maria Teresa Grecchi", names)
+
+    @patch("contact_discovery._search_official_site")
+    def test_official_site_discovery_prioritizes_explicit_decision_authority(self, search):
+        search.return_value = [
+            {
+                "url": "https://brerastudiomedico.it/il-nostro-team.php",
+                "title": "Brera Studio Medico | Il nostro team",
+                "content": (
+                    "Dott. Fabrizio Cecchini Medico chirurgo. "
+                    "Il dottor Fabrizio Cecchini è il direttore sanitario di Brera Studio Medico. "
+                    "Dott. Maria Teresa Grecchi medico chirurgo specialista in medicina estetica."
+                ),
+                "search_query": '"Brera Studio Medico" "direttore sanitario"',
+            }
+        ]
+
+        contacts = discover_official_site_contacts(
+            company_name="Brera Studio Medico",
+            account_website="https://www.brerastudiomedico.it",
+            source_url="https://www.brerastudiomedico.it/medicina-estetica.php",
+            target_roles=["Direttore Sanitario", "Medico Estetico"],
+            api_key="test-key",
+            max_results=8,
+        )
+
+        self.assertGreaterEqual(len(contacts), 2)
+        self.assertEqual(contacts.iloc[0]["person_name"], "Fabrizio Cecchini")
+        self.assertTrue(bool(contacts.iloc[0]["decision_authority_signal"]))
+        self.assertEqual(contacts.iloc[0]["contact_confidence"], "High")
+        self.assertIn("Direttore Sanitario", contacts.iloc[0]["matched_target_roles"])
+
+        doctor = contacts[
+            contacts["person_name"] == "Maria Teresa Grecchi"
+        ].iloc[0]
+        self.assertFalse(bool(doctor["decision_authority_signal"]))
+        self.assertEqual(doctor["professional_role_signal"], "medico estetico")
+
+    @patch("contact_discovery.discover_linkedin_contacts")
+    @patch("contact_discovery.discover_official_site_contacts")
+    def test_account_contact_discovery_skips_broad_linkedin_when_official_authority_exists(
+        self,
+        official_search,
+        linkedin_search,
+    ):
+        import pandas as pd
+
+        official_search.return_value = pd.DataFrame(
+            [
+                {
+                    "person_name": "Fabrizio Cecchini",
+                    "headline": "Direttore Sanitario",
+                    "source_type": "Official site",
+                    "contact_relevance_score": 100,
+                    "contact_confidence": "High",
+                    "decision_authority_signal": True,
+                    "linkedin_url": "",
+                }
+            ]
+        )
+
+        contacts = discover_account_contacts(
+            company_name="Brera Studio Medico",
+            account_website="https://www.brerastudiomedico.it",
+            source_url="https://www.brerastudiomedico.it/medicina-estetica.php",
+            country="Italy",
+            target_roles=["Direttore Sanitario", "Medico Estetico"],
+            api_key="test-key",
+            location_context="Milano Lombardia",
+        )
+
+        linkedin_search.assert_not_called()
+        self.assertEqual(len(contacts), 1)
+        self.assertTrue(bool(contacts.iloc[0]["decision_authority_signal"]))
+
+    def test_merge_preserves_official_role_and_adds_linkedin_corroboration(self):
+        import pandas as pd
+
+        official = pd.DataFrame(
+            [
+                {
+                    "person_name": "Fabrizio Cecchini",
+                    "headline": "Direttore Sanitario",
+                    "linkedin_url": "",
+                    "source_type": "Official site",
+                    "contact_relevance_score": 100,
+                    "contact_confidence": "High",
+                    "decision_authority_signal": True,
+                    "why_contact": "official account-domain evidence",
+                }
+            ]
+        )
+        linkedin = pd.DataFrame(
+            [
+                {
+                    "person_name": "Fabrizio Cecchini",
+                    "headline": "Medico Chirurgo",
+                    "linkedin_url": "https://it.linkedin.com/in/fabrizio-cecchini",
+                    "source_type": "Person",
+                    "contact_relevance_score": 85,
+                    "contact_confidence": "High",
+                    "decision_authority_signal": False,
+                }
+            ]
+        )
+        linkedin["raw_profile_count"] = 1
+        linkedin["held_back_profile_count"] = 0
+
+        merged = _merge_contact_sources(official, linkedin, max_results=8)
+
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(
+            merged.iloc[0]["linkedin_url"],
+            "https://it.linkedin.com/in/fabrizio-cecchini",
+        )
+        self.assertEqual(
+            merged.iloc[0]["source_type"],
+            "Official site + LinkedIn",
+        )
+        self.assertTrue(bool(merged.iloc[0]["decision_authority_signal"]))
 
     def test_org_contact_requires_real_account_identity(self):
         unrelated = score_contact_result(
