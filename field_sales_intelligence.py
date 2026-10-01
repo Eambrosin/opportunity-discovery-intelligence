@@ -508,10 +508,24 @@ def build_field_sales_intelligence(
     visit = visit_priority(account, _number(product.get("product_fit_score"), 0))
     questions = _field_questions(account, product)
 
+    decision_name = _text(account.get("decision_maker_name"))
+    decision_headline = _text(account.get("decision_maker_headline"))
+    decision_verified = _bool(account.get("decision_maker_verified"))
+
+    decision_label = decision_name
+    if decision_name and decision_headline:
+        decision_label = f"{decision_name} ({decision_headline})"
+
     if visit["visit_priority"] in {"Visit Now", "High Priority Visit"}:
-        next_action = "Plan / confirm field visit"
+        if decision_verified and decision_label:
+            next_action = f"Contact {decision_label} and plan / confirm field visit"
+        else:
+            next_action = "Plan / confirm field visit"
     elif visit["visit_priority"] == "Contact / Prepare First":
-        next_action = "Contact decision-maker and qualify before allocating a field slot"
+        if decision_label:
+            next_action = f"Contact {decision_label} and qualify before allocating a field slot"
+        else:
+            next_action = "Contact decision-maker and qualify before allocating a field slot"
     else:
         next_action = "Research and enrich before field allocation"
 

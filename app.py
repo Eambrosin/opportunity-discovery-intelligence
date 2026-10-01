@@ -152,7 +152,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-contact-runtime-resolver"
+DEPLOYMENT_REVISION = "2026-10-01-decision-maker-field-visibility"
 
 
 def split_values(value: str) -> list[str]:
@@ -1347,6 +1347,27 @@ field_next_action = safe_text(
     safe_text(selected.get("next_best_action", ""), "Complete qualification research"),
 )
 
+decision_maker_name = safe_text(selected.get("decision_maker_name", ""))
+decision_maker_headline = safe_text(selected.get("decision_maker_headline", ""))
+decision_maker_source_type = safe_text(
+    selected.get("decision_maker_source_type", "")
+)
+decision_maker_source_url = safe_text(
+    selected.get("decision_maker_source_url", "")
+)
+decision_maker_confidence = safe_text(
+    selected.get("decision_maker_confidence", "")
+)
+decision_maker_verified = bool(
+    selected.get("decision_maker_verified", False)
+)
+
+decision_maker_label = decision_maker_name
+if decision_maker_name and decision_maker_headline:
+    decision_maker_label = (
+        f"{decision_maker_name} — {decision_maker_headline}"
+    )
+
 why_now_parts = []
 if safe_text(selected.get("account_evidence_confidence", "")) == "High":
     why_now_parts.append("high evidence confidence")
@@ -1356,7 +1377,9 @@ if location_basis.startswith("Source-observed"):
 if safe_text(selected.get("qualification_readiness_status", "")) == "Ready for Qualification":
     why_now_parts.append("research-ready")
 buyer_access = safe_text(selected.get("buyer_access_status", ""))
-if "contact path" in buyer_access.lower() or "business contact" in buyer_access.lower():
+if decision_maker_verified and decision_maker_name:
+    why_now_parts.append("decision-maker authority observed")
+elif "contact path" in buyer_access.lower() or "business contact" in buyer_access.lower():
     why_now_parts.append("public contact path")
 if safe_text(selected.get("professional_setting", "")):
     why_now_parts.append("medical-setting evidence")
@@ -1387,6 +1410,26 @@ with st.container(border=True):
         st.markdown("**NEXT ACTION**")
         st.markdown(field_next_action)
     with fd2:
+        st.markdown("**DECISION MAKER**")
+        if decision_maker_label:
+            st.markdown(decision_maker_label)
+            decision_meta = " · ".join(
+                item
+                for item in [
+                    decision_maker_confidence,
+                    decision_maker_source_type,
+                ]
+                if item
+            )
+            if decision_meta:
+                st.caption(decision_meta)
+            if decision_maker_source_url:
+                st.markdown(
+                    f"[Open authority evidence]({decision_maker_source_url})"
+                )
+        else:
+            st.markdown("Not yet established")
+
         st.markdown("**DELEO HYPOTHESIS**")
         st.markdown(deleo_hypothesis)
         st.markdown("**WHAT TO DISCOVER**")
@@ -1964,6 +2007,11 @@ else:
                     "decision_maker_linkedin": str(
                         top_contact.get("linkedin_url", "") or ""
                     ),
+                    "decision_maker_source_url": str(
+                        top_contact.get("source_url", "") or ""
+                    ),
+                    "decision_maker_source_type": top_source_type,
+                    "decision_maker_authority_signal": bool(top_authority),
                     "decision_maker_confidence": top_confidence,
                     "decision_maker_relevance_score": top_relevance,
                 }
@@ -2086,6 +2134,18 @@ else:
                 ),
                 "linkedin_url": contacts["linkedin_url"],
                 "contact_headline": contacts["headline"],
+                "contact_source_type": contacts.get(
+                    "source_type",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "contact_source_url": contacts.get(
+                    "source_url",
+                    pd.Series([""] * len(contacts)),
+                ),
+                "decision_authority_signal": contacts.get(
+                    "decision_authority_signal",
+                    pd.Series([False] * len(contacts)),
+                ),
                 "contact_outreach_angle": contacts["suggested_outreach_angle"],
                 "contact_relevance_score": contacts.get(
                     "contact_relevance_score",
@@ -2168,6 +2228,21 @@ else:
                 ),
                 "buyer_access_status": safe_text(
                     selected.get("buyer_access_status", "")
+                ),
+                "decision_maker_name": safe_text(
+                    selected.get("decision_maker_name", "")
+                ),
+                "decision_maker_headline": safe_text(
+                    selected.get("decision_maker_headline", "")
+                ),
+                "decision_maker_source_type": safe_text(
+                    selected.get("decision_maker_source_type", "")
+                ),
+                "decision_maker_source_url": safe_text(
+                    selected.get("decision_maker_source_url", "")
+                ),
+                "decision_maker_verified": bool(
+                    selected.get("decision_maker_verified", False)
                 ),
                 "commercial_hypothesis": safe_text(
                     selected.get("commercial_hypothesis", "")
@@ -2440,8 +2515,11 @@ queue_columns = [
     "account_opportunity_score",
     "qualification_readiness_status",
     "product_fit_family",
+    "decision_maker_name",
+    "decision_maker_headline",
     "territory_province",
     "territory_city",
+    "public_phone",
     "field_next_best_action",
 ]
 queue_view = ranked.copy()
