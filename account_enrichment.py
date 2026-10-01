@@ -110,6 +110,34 @@ def _token_match_ratio(company_name: str, evidence: str) -> float:
     return matched / len(tokens)
 
 
+def _trusted_source_domain(account: dict) -> str:
+    """
+    Preserve a strong discovery identity during enrichment.
+
+    Once discovery has found a direct-looking account domain with strong identity
+    evidence, enrichment may add contact pages/evidence from that same domain but
+    should not silently replace the account with another organization that merely
+    shares a generic or geographic token.
+    """
+    current_domain = _text(account.get("source_domain")) or _domain(
+        _text(account.get("source_url"))
+    )
+    if not current_domain or _is_excluded_domain(current_domain):
+        return ""
+
+    try:
+        identity_score = float(account.get("account_identity_score", 0) or 0)
+    except Exception:
+        identity_score = 0.0
+
+    return current_domain if identity_score >= 70 else ""
+
+
+def _exact_company_phrase_match(company_name: str, evidence: str) -> bool:
+    company = _norm(company_name)
+    return bool(company and company in _norm(evidence))
+
+
 def _extract_email(text: str) -> str:
     candidates = re.findall(
         r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
@@ -234,6 +262,24 @@ def score_account_web_result(
     current_domain = _text(account.get("source_domain")) or _domain(
         _text(account.get("source_url"))
     )
+    trusted_source_domain = _trusted_source_domain(account)
+    exact_company_phrase = _exact_company_phrase_match(
+        company_name,
+        evidence,
+    )
+
+    if (
+        trusted_source_domain
+        and domain != trusted_source_domain
+        and not exact_company_phrase
+    ):
+        return {
+            "website_match_score": 0.0,
+            "website_match_reasons": (
+                "cross-domain identity not proven against trusted discovery source"
+            ),
+        }
+
     location_terms = [
         _text(account.get("territory_city")),
         _text(account.get("territory_province")),
@@ -365,6 +411,23 @@ def summarize_enrichment_results(
     fit_terms: list[str] | None = None,
 ) -> dict:
     scored = []
+
+    trusted_source_domain = _trusted_source_domain(account)
+    source_url = _text(account.get("source_url"))
+    if trusted_source_domain and source_url:
+        scored.append(
+            {
+                "title": _text(account.get("source_title"))
+                or _text(account.get("company_name")),
+                "content": _text(account.get("source_snippet")),
+                "url": source_url,
+                "website_match_score": 95.0,
+                "website_match_reasons": (
+                    "trusted discovery source domain preserved"
+                ),
+            }
+        )
+
     for result in results:
         scored_result = dict(result)
         scored_result.update(score_account_web_result(result, account))
