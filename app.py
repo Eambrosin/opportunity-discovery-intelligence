@@ -18,6 +18,7 @@ from discovery_engine import (
     screen_candidates,
 )
 from milano_discovery import build_milano_discovery_plan
+from evidence_snapshot import build_relevant_evidence_snapshot
 from presets import PRESETS, get_preset, profile_id_for
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
@@ -93,7 +94,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-milano-discovery-import-fix"
+DEPLOYMENT_REVISION = "2026-10-01-relevant-evidence-snapshot"
 
 
 def split_values(value: str) -> list[str]:
@@ -1596,17 +1597,44 @@ if territory_mode and "territory_location_basis" in selected.index:
 source_url = safe_text(selected.get("source_url", ""))
 source_snippet = safe_text(selected.get("source_snippet", ""))
 
+if source_url or source_snippet:
+    st.markdown("### Relevant Evidence Snapshot")
+
 if source_url:
     st.markdown(f"**Primary evidence source:** {source_url}")
 
 if source_snippet:
-    compact_evidence = " ".join(source_snippet.split())
-    evidence_preview = compact_evidence[:320]
-    if len(compact_evidence) > 320:
-        evidence_preview += "…"
-    st.markdown(f"**Evidence preview:** {evidence_preview}")
+    evidence_snapshot = build_relevant_evidence_snapshot(source_snippet)
 
-    with st.expander("View raw source evidence excerpt", expanded=False):
+    structured_contact_lines = []
+    public_address = safe_text(selected.get("public_address", ""))
+    public_phone = safe_text(selected.get("public_phone", ""))
+    public_email = safe_text(selected.get("public_email", ""))
+
+    if public_address:
+        structured_contact_lines.append(f"Address: {public_address}")
+    if public_phone:
+        structured_contact_lines.append(f"Phone: {public_phone}")
+    if public_email:
+        structured_contact_lines.append(f"Email: {public_email}")
+
+    contact_lines = structured_contact_lines or evidence_snapshot["contact_lines"]
+    if contact_lines:
+        st.markdown("**Contact evidence**")
+        for line in contact_lines:
+            st.markdown(f"- {line}")
+
+    commercial_evidence = evidence_snapshot["commercial_evidence"]
+    if commercial_evidence:
+        st.markdown("**Aesthetic / treatment evidence**")
+        for line in commercial_evidence:
+            st.markdown(f"- {line}")
+    elif evidence_snapshot["fallback_preview"]:
+        st.markdown(
+            f"**Evidence preview:** {evidence_snapshot['fallback_preview']}"
+        )
+
+    with st.expander("View full raw source text (audit)", expanded=False):
         st.write(source_snippet)
 
 with st.expander("Explainable score"):

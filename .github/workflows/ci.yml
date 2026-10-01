@@ -24,11 +24,11 @@ jobs:
 
       - name: Compile application modules
         run: |
-          python -m py_compile app.py discovery_engine.py web_discovery.py contact_discovery.py account_enrichment.py sales_intelligence.py field_sales_intelligence.py milano_discovery.py presets.py territory_profiles.py territory_intelligence.py vendor_profiles.py ai_insights.py
+          python -m py_compile app.py discovery_engine.py web_discovery.py contact_discovery.py account_enrichment.py sales_intelligence.py field_sales_intelligence.py milano_discovery.py evidence_snapshot.py presets.py territory_profiles.py territory_intelligence.py vendor_profiles.py ai_insights.py
 
       - name: Smoke-test application imports
         run: |
-          python -c "from account_enrichment import assess_qualification_readiness, enrich_account; from sales_intelligence import build_sales_intelligence; from field_sales_intelligence import build_field_sales_intelligence, revenue_target_scenarios, revenue_execution_capacity; from milano_discovery import build_milano_discovery_plan; from discovery_engine import qualification_handoff"
+          python -c "from account_enrichment import assess_qualification_readiness, enrich_account; from sales_intelligence import build_sales_intelligence; from field_sales_intelligence import build_field_sales_intelligence, revenue_target_scenarios, revenue_execution_capacity; from milano_discovery import build_milano_discovery_plan; from evidence_snapshot import build_relevant_evidence_snapshot; from discovery_engine import qualification_handoff"
 
       - name: Validate app import contract
         run: |
