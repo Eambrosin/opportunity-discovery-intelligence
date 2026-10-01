@@ -30,6 +30,31 @@ jobs:
         run: |
           python -c "from account_enrichment import assess_qualification_readiness, enrich_account; from sales_intelligence import build_sales_intelligence; from field_sales_intelligence import build_field_sales_intelligence, revenue_target_scenarios, revenue_execution_capacity; from milano_discovery import build_milano_discovery_plan; from discovery_engine import qualification_handoff"
 
+      - name: Validate app import contract
+        run: |
+          python - <<'PY'
+          import ast
+          from pathlib import Path
+
+          tree = ast.parse(Path("app.py").read_text())
+          imported = set()
+          used = set()
+
+          for node in ast.walk(tree):
+              if isinstance(node, ast.ImportFrom):
+                  for alias in node.names:
+                      imported.add(alias.asname or alias.name)
+              elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                  used.add(node.id)
+
+          symbol = "build_milano_discovery_plan"
+          if symbol in used and symbol not in imported:
+              raise SystemExit(
+                  f"app.py uses {symbol} but does not import it"
+              )
+          print("App import contract OK")
+          PY
+
       - name: Run discovery-engine tests
         run: |
           python -m unittest discover -s tests -v
