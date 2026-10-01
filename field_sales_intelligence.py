@@ -151,6 +151,25 @@ def revenue_execution_capacity(
     return result
 
 
+HIGH_SPECIFICITY_PRODUCT_SIGNALS = {
+    "hifu",
+    "criolipolisi",
+    "cryolipolysis",
+    "laser frazionato",
+    "fractional laser",
+    "erbium glass",
+    "focused ultrasound",
+    "ultrasuoni focalizzati",
+    "tonificazione muscolare",
+    "muscle toning",
+    "muscle stimulation",
+    "pavimento pelvico",
+    "pelvic floor",
+    "radiofrequenza corpo",
+    "body layering",
+}
+
+
 def product_fit_hypothesis(
     account: dict,
     vendor_profile: dict | None,
@@ -182,6 +201,8 @@ def product_fit_hypothesis(
     }
 
     candidates: list[dict] = []
+    weak_signals: list[str] = []
+
     for solution in solutions:
         matched_terms = [
             term
@@ -194,12 +215,26 @@ def product_fit_hypothesis(
             if _norm(axis) in observed_axes or _norm(axis) in evidence
         ]
 
+        specific_single_signal = any(
+            _norm(term) in HIGH_SPECIFICITY_PRODUCT_SIGNALS
+            for term in matched_terms
+        )
+        sufficient_product_evidence = bool(
+            matched_axes
+            or len(matched_terms) >= 2
+            or specific_single_signal
+        )
+
+        if (matched_terms or matched_axes) and not sufficient_product_evidence:
+            weak_signals.extend(matched_terms)
+            continue
+
         evidence_score = min(
             100.0,
             (45.0 if matched_axes else 0.0)
             + (min(len(matched_terms), 4) * 12.0),
         )
-        if matched_terms or matched_axes:
+        if sufficient_product_evidence:
             candidates.append(
                 {
                     "name": solution.get("name", ""),
@@ -211,13 +246,19 @@ def product_fit_hypothesis(
             )
 
     if not candidates:
+        weak_signals = list(dict.fromkeys(weak_signals))
+        weak_basis = (
+            "Weak public signal observed: "
+            + ", ".join(weak_signals[:5])
+            + ". Insufficient evidence for a product-specific hypothesis."
+            if weak_signals
+            else "No product-family signal is established from the current public evidence."
+        )
         return {
             "product_fit_family": "Needs discovery",
             "product_fit_score": 0.0,
             "product_fit_status": "No product-specific evidence yet",
-            "product_fit_basis": (
-                "No product-family signal is established from the current public evidence."
-            ),
+            "product_fit_basis": weak_basis,
             "product_fit_questions": (
                 "Which treatment categories are strategically most important today? | "
                 "Which technologies are already installed, and where are the main gaps? | "
