@@ -92,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-milan-deep-dive-ux"
+DEPLOYMENT_REVISION = "2026-10-01-milano-query-execution-fix"
 
 
 def split_values(value: str) -> list[str]:
@@ -133,6 +133,25 @@ def safe_filename(value: str) -> str:
         .replace("/", "_")
         .replace("\\", "_")
     )
+
+
+MILANO_DEEP_DIVE_QUERY_TEMPLATES = [
+    "clinica medicina estetica Milano Lombardia Italy sito ufficiale",
+    "medico estetico studio Milano Lombardia Italy sito ufficiale",
+    "dermatologo medicina estetica Milano Lombardia Italy sito ufficiale",
+    "chirurgo plastico estetico Milano Lombardia Italy sito ufficiale",
+    "poliambulatorio medicina estetica Milano Lombardia Italy sito ufficiale",
+    "laser estetico dermatologia Milano Lombardia Italy sito ufficiale",
+    "criolipolisi medico estetico Milano Lombardia Italy sito ufficiale",
+    "body contouring medicina estetica Milano Lombardia Italy sito ufficiale",
+    "HIFU medicina estetica Milano Lombardia Italy sito ufficiale",
+    "skin rejuvenation medico estetico Milano Lombardia Italy sito ufficiale",
+]
+
+
+def build_milano_deep_dive_queries(max_queries: int) -> list[str]:
+    budget = max(1, min(int(max_queries), len(MILANO_DEEP_DIVE_QUERY_TEMPLATES)))
+    return MILANO_DEEP_DIVE_QUERY_TEMPLATES[:budget]
 
 
 def render_status_card(
@@ -514,13 +533,16 @@ if run:
                 if not selected_cluster_ids:
                     st.warning("Select at least one territory cluster before running discovery.")
                     st.stop()
-                queries = build_territory_search_queries(
-                    profile=profile,
-                    territory=territory,
-                    cluster_ids=selected_cluster_ids,
-                    max_queries=query_budget,
-                )
-                st.session_state.searched_cluster_ids = selected_cluster_ids[: len(queries)]
+                if scope_mode == "Milano deep dive":
+                    queries = build_milano_deep_dive_queries(query_budget)
+                else:
+                    queries = build_territory_search_queries(
+                        profile=profile,
+                        territory=territory,
+                        cluster_ids=selected_cluster_ids,
+                        max_queries=query_budget,
+                    )
+                st.session_state.searched_cluster_ids = list(selected_cluster_ids)
             else:
                 queries = build_search_queries(profile, max_queries=query_budget)
                 st.session_state.searched_cluster_ids = []
@@ -530,6 +552,17 @@ if run:
                 st.stop()
 
             st.write("**Generated discovery queries**")
+            dq1, dq2, dq3 = st.columns(3)
+            dq1.metric("Requested Queries", query_budget)
+            dq2.metric("Generated Queries", len(queries))
+            dq3.metric("Results / Query", max_results)
+
+            if len(queries) < query_budget:
+                st.warning(
+                    f"Only {len(queries)} distinct queries were generated from a requested "
+                    f"budget of {query_budget}. Review the search profile before interpreting coverage."
+                )
+
             st.code("\n".join(queries))
 
             source_df = discover_with_tavily(
