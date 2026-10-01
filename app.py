@@ -10,7 +10,65 @@ import streamlit as st
 
 from account_enrichment import assess_qualification_readiness, enrich_account
 from ai_insights import generate_evidence_aware_brief
-from contact_discovery import discover_account_contacts, discover_linkedin_market_professionals
+import contact_discovery as contact_discovery_module
+
+discover_linkedin_market_professionals = (
+    contact_discovery_module.discover_linkedin_market_professionals
+)
+
+def discover_account_contacts(
+    company_name: str,
+    account_website: str,
+    source_url: str,
+    country: str,
+    target_roles: list[str],
+    api_key: str,
+    max_results: int = 8,
+    timeout: int = 30,
+    location_context: str = "",
+) -> pd.DataFrame:
+    """
+    Resolve account-contact discovery at runtime so a stale Streamlit module cache
+    cannot crash the whole app during deployment.
+    """
+    account_discovery = getattr(
+        contact_discovery_module,
+        "discover_account_contacts",
+        None,
+    )
+    if callable(account_discovery):
+        return account_discovery(
+            company_name=company_name,
+            account_website=account_website,
+            source_url=source_url,
+            country=country,
+            target_roles=target_roles,
+            api_key=api_key,
+            max_results=max_results,
+            timeout=timeout,
+            location_context=location_context,
+        )
+
+    legacy_discovery = getattr(
+        contact_discovery_module,
+        "discover_linkedin_contacts",
+        None,
+    )
+    if not callable(legacy_discovery):
+        raise RuntimeError(
+            "Contact discovery module is incomplete. Reboot the Streamlit app "
+            "to load the latest repository revision."
+        )
+
+    return legacy_discovery(
+        company_name=company_name,
+        country=country,
+        target_roles=target_roles,
+        api_key=api_key,
+        max_results=max_results,
+        timeout=timeout,
+        location_context=location_context,
+    )
 from discovery_engine import (
     TargetProfile,
     build_search_queries,
@@ -94,7 +152,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-official-site-decision-maker"
+DEPLOYMENT_REVISION = "2026-10-01-contact-runtime-resolver"
 
 
 def split_values(value: str) -> list[str]:
