@@ -105,6 +105,52 @@ def _evidence_text(account: dict) -> str:
     return " ".join(_text(account.get(field)) for field in fields if _text(account.get(field)))
 
 
+def revenue_execution_capacity(
+    vendor_profile: dict | None,
+    *,
+    field_days_per_month: int,
+    qualified_visits_per_day: float,
+) -> pd.DataFrame:
+    """
+    Translate a revenue target into field-capacity requirements.
+
+    This is a planning model, not a sales forecast. It answers: given a chosen
+    field rhythm, what visit-to-sale conversion would be mathematically required
+    under each average-ticket scenario?
+    """
+    scenarios = revenue_target_scenarios(vendor_profile)
+    if scenarios.empty:
+        return pd.DataFrame()
+
+    field_days = max(0, int(field_days_per_month))
+    visits_per_day = max(0.0, float(qualified_visits_per_day))
+    visits_per_month = field_days * visits_per_day
+
+    result = scenarios.copy()
+    result["field_days_per_month"] = field_days
+    result["qualified_visits_per_day"] = visits_per_day
+    result["qualified_visits_per_month"] = round(visits_per_month, 1)
+
+    if visits_per_month <= 0:
+        result["required_visit_to_sale_conversion_pct"] = 0.0
+        result["visits_per_required_sale"] = 0.0
+        return result
+
+    exact_units_per_month = (
+        result["annual_target_eur"]
+        / result["average_ticket_eur"]
+        / 12
+    )
+    result["required_visit_to_sale_conversion_pct"] = (
+        exact_units_per_month / visits_per_month * 100
+    ).round(2)
+    result["visits_per_required_sale"] = (
+        visits_per_month / exact_units_per_month
+    ).round(1)
+
+    return result
+
+
 def product_fit_hypothesis(
     account: dict,
     vendor_profile: dict | None,
