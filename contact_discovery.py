@@ -108,16 +108,31 @@ def _extract_honorific_names(text: str) -> list[str]:
     return list(dict.fromkeys(names))
 
 
-def _person_context(text: str, person_name: str, radius: int = 260) -> str:
+def _person_context(text: str, person_name: str, radius: int = 120) -> str:
     value = str(text or "")
     if not value or not person_name:
         return ""
 
-    lower = value.lower()
     needle = person_name.lower()
+
+    # Prefer sentence-level attribution so a role belonging to one doctor is not
+    # accidentally assigned to another person listed nearby on the same team page.
+    sentence_chunks = [
+        chunk.strip()
+        for chunk in re.split(r"(?<=[.!?;])\\s+|[\\r\\n]+", value)
+        if chunk.strip()
+    ]
+    matched_sentences = [
+        chunk
+        for chunk in sentence_chunks
+        if needle in chunk.lower()
+    ]
+    if matched_sentences:
+        return " ".join(matched_sentences)
+
+    lower = value.lower()
     windows = []
     start = 0
-
     while True:
         index = lower.find(needle, start)
         if index < 0:
