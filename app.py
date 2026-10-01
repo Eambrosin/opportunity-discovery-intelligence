@@ -10,7 +10,7 @@ import streamlit as st
 
 from account_enrichment import assess_qualification_readiness, enrich_account
 from ai_insights import generate_evidence_aware_brief
-from contact_discovery import discover_linkedin_contacts, discover_linkedin_market_professionals
+from contact_discovery import discover_account_contacts, discover_linkedin_market_professionals
 from discovery_engine import (
     TargetProfile,
     build_search_queries,
@@ -94,7 +94,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-buyer-access-field-gating"
+DEPLOYMENT_REVISION = "2026-10-01-official-site-decision-maker"
 
 
 def split_values(value: str) -> list[str]:
@@ -1771,11 +1771,11 @@ else:
         "batch enrichment workflow."
     )
 
-st.subheader("Public Contact & LinkedIn Validation")
+st.subheader("Public Decision-Maker & Contact Validation")
 st.caption(
-    "Finds and validates publicly indexed LinkedIn person-profile evidence for the selected account. "
-    "Weak homonyms are held back; the workflow does not log into LinkedIn, scrape private pages "
-    "or claim unverified contact details."
+    "Searches the verified account website first for named professionals and explicit authority roles, "
+    "then uses publicly indexed LinkedIn evidence as complementary corroboration. Weak homonyms are held back; "
+    "the workflow does not log into LinkedIn, scrape private pages or claim unverified contact details."
 )
 
 contact_key = f"linkedin_contacts::{selected_company}"
@@ -1790,7 +1790,7 @@ else:
         or (profile.countries[0] if profile.countries else "")
     )
 
-    if st.button("Find Public LinkedIn Contacts"):
+    if st.button("Find Public Decision-Maker Contacts"):
         try:
             with st.spinner("Searching public professional-profile evidence..."):
                 location_parts = [
@@ -1802,8 +1802,14 @@ else:
                     part for part in location_parts if part
                 )
 
-                contacts = discover_linkedin_contacts(
+                contacts = discover_account_contacts(
                     company_name=selected_company,
+                    account_website=safe_text(
+                        selected.get("account_website", "")
+                    ),
+                    source_url=safe_text(
+                        selected.get("source_url", "")
+                    ),
                     country=contact_country,
                     target_roles=profile.target_roles,
                     api_key=contact_tavily_key,
@@ -1831,11 +1837,26 @@ else:
                         pd.Series([0]),
                     ).iloc[0]
                 )
+                authority_count = int(
+                    contacts.get(
+                        "decision_authority_signal",
+                        pd.Series([False] * len(contacts)),
+                    )
+                    .fillna(False)
+                    .astype(bool)
+                    .sum()
+                )
                 st.session_state[contact_status_key] = (
-                    f"Found {len(contacts)} account-linked LinkedIn profile match"
+                    f"Found {len(contacts)} account-linked public contact match"
                     f"{'es' if len(contacts) != 1 else ''}"
                     + (
-                        f"; {held_back_profile_count} weak homonym/profile match"
+                        f"; {authority_count} explicit decision-authority signal"
+                        f"{'s' if authority_count != 1 else ''}"
+                        if authority_count
+                        else "; no explicit decision-authority role found"
+                    )
+                    + (
+                        f"; {held_back_profile_count} weak LinkedIn homonym/profile match"
                         f"{'es' if held_back_profile_count != 1 else ''} held back."
                         if held_back_profile_count
                         else "."
@@ -1843,8 +1864,8 @@ else:
                 )
             else:
                 st.session_state[contact_status_key] = (
-                    "No sufficiently account-linked LinkedIn person profiles were found for this "
-                    "account in the current search. This does not mean no LinkedIn profile exists."
+                    "No sufficiently account-linked public professional or decision-authority evidence "
+                    "was found in the current search. This does not mean no relevant person exists."
                 )
 
             if isinstance(contacts, pd.DataFrame) and not contacts.empty:
@@ -1856,13 +1877,24 @@ else:
                     top_contact.get("contact_confidence", "") or ""
                 )
 
+                top_authority = bool(
+                    top_contact.get("decision_authority_signal", False)
+                )
+                top_source_type = str(
+                    top_contact.get("source_type", "") or ""
+                )
+
                 decision_values = {
                     "decision_maker_candidate_found": bool(
-                        top_relevance >= 75
+                        top_authority and top_relevance >= 75
                     ),
                     "decision_maker_verified": bool(
-                        top_relevance >= 100
+                        top_authority
                         and top_confidence == "High"
+                        and (
+                            "Official site" in top_source_type
+                            or top_relevance >= 100
+                        )
                     ),
                     "decision_maker_name": str(
                         top_contact.get("person_name", "") or ""
@@ -1904,6 +1936,8 @@ else:
         contact_columns = [
             "person_name",
             "headline",
+            "source_type",
+            "decision_authority_signal",
             "contact_relevance_score",
             "contact_confidence",
             "matched_target_roles",
@@ -1912,7 +1946,7 @@ else:
             "why_contact",
             "contact_readiness_score",
             "contact_status",
-            "suggested_outreach_angle",
+            "source_url",
             "linkedin_url",
         ]
         st.dataframe(
@@ -1920,6 +1954,7 @@ else:
             use_container_width=True,
             hide_index=True,
             column_config={
+                "source_url": st.column_config.LinkColumn("Official source"),
                 "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
             },
         )
@@ -1928,6 +1963,8 @@ else:
                 column
                 for column in [
                     "person_name",
+                    "source_type",
+                    "source_url",
                     "linkedin_url",
                     "source_snippet",
                 ]
@@ -1938,6 +1975,7 @@ else:
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "source_url": st.column_config.LinkColumn("Official source"),
                     "linkedin_url": st.column_config.LinkColumn("LinkedIn"),
                 },
             )
