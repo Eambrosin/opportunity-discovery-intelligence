@@ -140,10 +140,20 @@ def build_territory_search_queries(
     cluster_ids: Iterable[str],
     max_queries: int = 12,
 ) -> list[str]:
+    """
+    Build geographically balanced search queries.
+
+    The first pass gives each selected cluster one query. If the query budget is
+    larger than the number of clusters, additional passes rotate search
+    archetypes/fit signals within the same clusters. This makes a one-cluster
+    Milano deep dive materially different from a one-query territory sweep.
+    """
     clusters = selected_clusters(territory, cluster_ids)
     archetypes = [item for item in profile.search_archetypes if _text(item)]
     keywords = [item for item in profile.required_keywords if _text(item)]
 
+    if not clusters:
+        return []
     if not archetypes:
         archetypes = [profile.industry or "business"]
     if not keywords:
@@ -151,55 +161,87 @@ def build_territory_search_queries(
 
     italian_medical_terms = [
         "clinica medicina estetica",
-        "medico estetico",
+        "medico estetico studio",
         "dermatologo medicina estetica",
         "chirurgo plastico medicina estetica",
-        "centro estetico tecnologie",
+        "poliambulatorio medicina estetica",
+        "laser dermatologia estetica",
+        "body contouring medicina estetica",
+        "criolipolisi medico estetico",
+        "hifu medicina estetica",
+        "medicina estetica avanzata",
     ]
     german_medical_terms = [
         "ästhetische medizin",
         "ästhetischer arzt",
         "dermatologie ästhetik",
         "schönheitsklinik",
+        "ästhetische dermatologie",
+        "körperformung ästhetische medizin",
     ]
 
     queries: list[str] = []
+    pass_index = 0
+    max_passes = max(1, max_queries * 2)
 
-    for index, cluster in enumerate(clusters):
-        if len(queries) >= max_queries:
-            break
+    while len(queries) < max_queries and pass_index < max_passes:
+        added_this_pass = 0
 
-        cities = cluster.get("cities", [])
-        location = cities[0] if cities else cluster.get("province", "")
-        region = cluster.get("region", "")
+        for cluster_index, cluster in enumerate(clusters):
+            if len(queries) >= max_queries:
+                break
 
-        local_terms = german_medical_terms if "de" in cluster.get("languages", []) and index % 2 else italian_medical_terms
-        archetype = local_terms[index % len(local_terms)] if profile.market_profile_id == "medical_aesthetics" else archetypes[index % len(archetypes)]
-        keyword = keywords[index % len(keywords)]
+            cities = cluster.get("cities", [])
+            location = cities[0] if cities else cluster.get("province", "")
+            region = cluster.get("region", "")
 
-        source_preference = ""
-        if profile.market_profile_id == "medical_aesthetics":
-            source_preference = (
-                "offizielle website"
-                if "de" in cluster.get("languages", [])
-                else "sito ufficiale"
-            )
+            if profile.market_profile_id == "medical_aesthetics":
+                local_terms = (
+                    german_medical_terms
+                    if "de" in cluster.get("languages", [])
+                    else italian_medical_terms
+                )
+                archetype = local_terms[
+                    (pass_index + cluster_index) % len(local_terms)
+                ]
+            else:
+                archetype = archetypes[
+                    (pass_index + cluster_index) % len(archetypes)
+                ]
 
-        query = " ".join(
-            part
-            for part in [
-                archetype,
-                keyword,
-                location,
-                region,
-                territory.get("country", "Italy"),
-                source_preference,
+            keyword = keywords[
+                (pass_index * max(len(clusters), 1) + cluster_index)
+                % len(keywords)
             ]
-            if _text(part)
-        ).strip()
 
-        if query and query not in queries:
-            queries.append(query)
+            source_preference = ""
+            if profile.market_profile_id == "medical_aesthetics":
+                source_preference = (
+                    "offizielle website"
+                    if "de" in cluster.get("languages", [])
+                    else "sito ufficiale"
+                )
+
+            query = " ".join(
+                part
+                for part in [
+                    archetype,
+                    keyword,
+                    location,
+                    region,
+                    territory.get("country", "Italy"),
+                    source_preference,
+                ]
+                if _text(part)
+            ).strip()
+
+            if query and query not in queries:
+                queries.append(query)
+                added_this_pass += 1
+
+        if added_this_pass == 0:
+            break
+        pass_index += 1
 
     return queries[:max_queries]
 
@@ -441,15 +483,16 @@ def apply_territory_intelligence(
             else 0.0
         )
 
+        identity_score = float(row.get("account_identity_score", 0) or 0)
+
         account_breakdown = {
-            "discovery_fit": round(discovery_score * 0.60, 1),
-            "territory_location_evidence": round(location_confidence * 0.15, 1),
+            "discovery_fit": round(discovery_score * 0.50, 1),
+            "territory_location_evidence": round(location_confidence * 0.20, 1),
             "professional_setting": round(setting_score * 0.15, 1),
-            "technology_treatment_evidence": round(technology_score * 0.10, 1),
+            "account_identity_evidence": round(identity_score * 0.15, 1),
         }
         account_score = round(sum(account_breakdown.values()), 1)
 
-        identity_score = float(row.get("account_identity_score", 0) or 0)
         account_confidence_score = round(
             (confidence_score * 0.50)
             + (location_confidence * 0.30)
