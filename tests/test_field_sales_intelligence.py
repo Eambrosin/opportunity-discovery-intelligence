@@ -3,6 +3,7 @@ import pandas as pd
 from field_sales_intelligence import (
     build_field_sales_intelligence,
     product_fit_hypothesis,
+    revenue_execution_capacity,
     revenue_target_scenarios,
 )
 from vendor_profiles import DELEO_NORTH_ITALY
@@ -13,6 +14,19 @@ def test_revenue_target_scenarios_match_one_million_target():
     assert scenarios["annual_target_eur"].unique().tolist() == [1_000_000]
     assert scenarios["average_ticket_eur"].tolist() == [15_000, 25_000, 30_000, 40_000]
     assert scenarios["units_per_year"].tolist() == [67, 40, 34, 25]
+
+
+def test_revenue_execution_capacity_translates_field_activity_into_required_conversion():
+    model = revenue_execution_capacity(
+        DELEO_NORTH_ITALY,
+        field_days_per_month=18,
+        qualified_visits_per_day=6.5,
+    )
+    assert model["qualified_visits_per_month"].unique().tolist() == [117.0]
+    ticket_30k = model[model["average_ticket_eur"] == 30_000].iloc[0]
+    assert ticket_30k["units_per_month"] == 2.8
+    assert 2.0 < ticket_30k["required_visit_to_sale_conversion_pct"] < 3.0
+    assert ticket_30k["visits_per_required_sale"] > 40
 
 
 def test_product_fit_hypothesis_uses_observed_evidence():
