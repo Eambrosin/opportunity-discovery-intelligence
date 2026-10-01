@@ -1186,18 +1186,13 @@ with st.container(border=True):
     fd1, fd2 = st.columns(2)
     with fd1:
         st.markdown(
-            f"**VISIT DECISION**  
-{field_decision} · {field_location} · {field_score:.0f}/100"
+            f"**VISIT DECISION**  \\n{field_decision} · {field_location} · {field_score:.0f}/100"
         )
-        st.markdown(f"**WHY NOW**  
-{why_now}")
-        st.markdown(f"**NEXT ACTION**  
-{field_next_action}")
+        st.markdown(f"**WHY NOW**  \\n{why_now}")
+        st.markdown(f"**NEXT ACTION**  \\n{field_next_action}")
     with fd2:
-        st.markdown(f"**DELEO HYPOTHESIS**  
-{deleo_hypothesis}")
-        st.markdown(f"**WHAT TO DISCOVER**  
-{validation_focus}")
+        st.markdown(f"**DELEO HYPOTHESIS**  \\n{deleo_hypothesis}")
+        st.markdown(f"**WHAT TO DISCOVER**  \\n{validation_focus}")
 
 if territory_mode and "account_opportunity_score" in selected.index:
     w1, w2, w3, w4, w5 = st.columns(5)
