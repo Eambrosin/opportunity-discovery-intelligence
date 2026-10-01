@@ -119,7 +119,7 @@ def _person_context(text: str, person_name: str, radius: int = 120) -> str:
     # accidentally assigned to another person listed nearby on the same team page.
     sentence_chunks = [
         chunk.strip()
-        for chunk in re.split(r"(?<=[.!?;])\\s+|[\\r\\n]+", value)
+        for chunk in re.split(r"(?<=[.!?;])\s+|[\r\n]+", value)
         if chunk.strip()
     ]
     matched_sentences = [
