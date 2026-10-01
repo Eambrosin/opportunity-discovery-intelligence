@@ -9,9 +9,125 @@ import requests
 
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
 
+DECISION_AUTHORITY_TERMS = {
+    "direttore sanitario",
+    "medical director",
+    "titolare",
+    "owner",
+    "founder",
+    "clinic owner",
+    "practice owner",
+    "amministratore",
+    "amministratore delegato",
+    "managing director",
+    "ceo",
+}
+
+PERSON_NAME_ROLE_STOPWORDS = {
+    "medico",
+    "medica",
+    "chirurgo",
+    "chirurga",
+    "specialista",
+    "specializzato",
+    "specializzata",
+    "odontoiatra",
+    "dermatologo",
+    "dermatologa",
+    "direttore",
+    "direttrice",
+    "sanitario",
+    "sanitaria",
+    "fisioterapista",
+    "anestesista",
+    "biologa",
+    "biologo",
+    "nutrizionista",
+    "igienista",
+    "assistente",
+    "professore",
+    "professoressa",
+}
+
 
 def _norm(value: str) -> str:
     return " ".join(str(value or "").lower().replace("-", " ").split())
+
+
+def _domain(url: str) -> str:
+    try:
+        return urlparse(str(url or "")).netloc.lower().removeprefix("www.")
+    except Exception:
+        return ""
+
+
+def _decision_authority_signal(
+    matched_roles: list[str],
+    role_signal: str = "",
+) -> bool:
+    evidence = _norm(" ".join(matched_roles + ([role_signal] if role_signal else [])))
+    return any(term in evidence for term in DECISION_AUTHORITY_TERMS)
+
+
+def _extract_honorific_names(text: str) -> list[str]:
+    value = " ".join(str(text or "").split())
+    if not value:
+        return []
+
+    names = []
+    pattern = re.compile(
+        r"\b(?:Dott\.ssa|Dott\.sse|Dott\.|Dottor\.?|Dottore|Dottoressa|"
+        r"Dr\.?|Prof\.?)\s*",
+        flags=re.I,
+    )
+
+    for honorific in pattern.finditer(value):
+        tail = value[honorific.end():]
+        tokens = []
+        cursor = 0
+
+        while len(tokens) < 4:
+            match = re.match(
+                r"\s*([A-ZÀ-Ý][A-Za-zÀ-ÿ'’.-]+)",
+                tail[cursor:],
+            )
+            if not match:
+                break
+
+            token = match.group(1).strip(" ,.;|-")
+            normalized = _norm(token).strip(".")
+            if normalized in PERSON_NAME_ROLE_STOPWORDS:
+                break
+
+            tokens.append(token)
+            cursor += match.end()
+
+        if len(tokens) >= 2:
+            names.append(" ".join(tokens))
+
+    return list(dict.fromkeys(names))
+
+
+def _person_context(text: str, person_name: str, radius: int = 260) -> str:
+    value = str(text or "")
+    if not value or not person_name:
+        return ""
+
+    lower = value.lower()
+    needle = person_name.lower()
+    windows = []
+    start = 0
+
+    while True:
+        index = lower.find(needle, start)
+        if index < 0:
+            break
+        left = max(0, index - radius)
+        right = min(len(value), index + len(person_name) + radius)
+        windows.append(value[left:right])
+        start = index + len(needle)
+
+    return " ".join(windows)
 
 
 def _linkedin_kind(url: str) -> str:
@@ -286,6 +402,10 @@ def score_contact_result(
         "contact_relevance_score": score,
         "contact_confidence": confidence,
         "account_identity_match": bool(account_identity_match),
+        "decision_authority_signal": _decision_authority_signal(
+            roles,
+            role_signal,
+        ),
         "company_match_strength": int(company_strength if not person_account else 0),
         "company_match_reason": company_reason if not person_account else "",
         "matched_target_roles": ", ".join(roles),
@@ -294,6 +414,288 @@ def score_contact_result(
         "why_contact": ", ".join(reasons),
         "suggested_outreach_angle": _outreach_angle(outreach_roles),
     }
+
+
+def _search_official_site(
+    queries: list[str],
+    domain: str,
+    api_key: str,
+    max_results_per_query: int,
+    timeout: int,
+) -> list[dict]:
+    results = []
+    seen_urls = set()
+
+    for query in queries:
+        response = requests.post(
+            TAVILY_ENDPOINT,
+            json={
+                "api_key": api_key,
+                "query": query,
+                "search_depth": "basic",
+                "max_results": max_results_per_query,
+                "include_answer": False,
+                "include_raw_content": False,
+                "include_domains": [domain],
+            },
+            timeout=timeout,
+        )
+        response.raise_for_status()
+
+        for result in response.json().get("results", []):
+            url = str(result.get("url", "")).strip()
+            if not url or url in seen_urls or _domain(url) != domain:
+                continue
+            seen_urls.add(url)
+            row = dict(result)
+            row["search_query"] = query
+            results.append(row)
+
+    return results
+
+
+def _official_site_queries(
+    company_name: str,
+    domain: str,
+) -> list[str]:
+    exact = f'"{company_name}"'
+    return [
+        f'{exact} "direttore sanitario"',
+        f'{exact} titolare founder owner "medical director"',
+        f'{exact} team medici "medicina estetica"',
+        f'{exact} dermatologo "medico estetico" "chirurgo plastico"',
+    ]
+
+
+def discover_official_site_contacts(
+    company_name: str,
+    account_website: str,
+    source_url: str,
+    target_roles: list[str],
+    api_key: str,
+    max_results: int = 8,
+    timeout: int = 30,
+) -> pd.DataFrame:
+    """
+    Find named professionals on the already-verified account domain.
+
+    Official-site role evidence is treated as stronger account-identity evidence
+    than a search-indexed social-profile snippet. It can identify a decision maker
+    even when LinkedIn does not expose a usable profile.
+    """
+    if not api_key:
+        raise ValueError("A Tavily API key is required for official-site contact discovery.")
+
+    domain = _domain(account_website) or _domain(source_url)
+    if not domain:
+        return pd.DataFrame()
+
+    queries = _official_site_queries(company_name, domain)
+    raw_results = _search_official_site(
+        queries=queries,
+        domain=domain,
+        api_key=api_key,
+        max_results_per_query=max(3, min(6, max_results)),
+        timeout=timeout,
+    )
+
+    rows = []
+    seen_people = set()
+
+    for result in raw_results:
+        title = str(result.get("title", "")).strip()
+        snippet = str(result.get("content", "")).strip()
+        evidence = f"{title} {snippet}".strip()
+
+        for person_name in _extract_honorific_names(evidence):
+            key = _norm(person_name)
+            if not key or key in seen_people:
+                continue
+
+            context = _person_context(evidence, person_name) or evidence
+            roles = _matches(context, target_roles)
+            role_signal = _professional_role_signal(context)
+            authority = _decision_authority_signal(roles, role_signal)
+
+            if not roles and not role_signal:
+                continue
+
+            score = 65
+            reasons = ["official account-domain evidence"]
+            if roles:
+                score += 20
+                reasons.append("target-role match")
+            elif role_signal:
+                score += 10
+                reasons.append("professional-role signal")
+            if authority:
+                score += 15
+                reasons.append("explicit decision-authority signal")
+
+            score = min(score, 100)
+            confidence = "High" if authority or roles else "Medium"
+            outreach_roles = roles or ([role_signal] if role_signal else [])
+
+            rows.append(
+                {
+                    "person_name": person_name,
+                    "headline": ", ".join(roles) or role_signal,
+                    "linkedin_url": "",
+                    "source_url": str(result.get("url", "")).strip(),
+                    "source_snippet": context[:1400],
+                    "source_type": "Official site",
+                    "search_query": result.get("search_query", ""),
+                    "contact_relevance_score": score,
+                    "contact_confidence": confidence,
+                    "account_identity_match": True,
+                    "decision_authority_signal": bool(authority),
+                    "company_match_strength": 100,
+                    "company_match_reason": "official account domain",
+                    "matched_target_roles": ", ".join(roles),
+                    "professional_role_signal": role_signal,
+                    "location_match_evidence": "",
+                    "why_contact": ", ".join(reasons),
+                    "suggested_outreach_angle": _outreach_angle(outreach_roles),
+                }
+            )
+            seen_people.add(key)
+
+    if not rows:
+        return pd.DataFrame()
+
+    return pd.DataFrame(rows).sort_values(
+        [
+            "decision_authority_signal",
+            "contact_relevance_score",
+            "person_name",
+        ],
+        ascending=[False, False, True],
+    ).head(max_results).reset_index(drop=True)
+
+
+def _merge_contact_sources(
+    official_contacts: pd.DataFrame,
+    linkedin_contacts: pd.DataFrame,
+    max_results: int,
+) -> pd.DataFrame:
+    if official_contacts.empty and linkedin_contacts.empty:
+        return pd.DataFrame()
+    if official_contacts.empty:
+        return linkedin_contacts.copy()
+    if linkedin_contacts.empty:
+        result = official_contacts.copy()
+        result["raw_profile_count"] = 0
+        result["held_back_profile_count"] = 0
+        return result
+
+    linkedin_by_name = {
+        _norm(row.get("person_name")): row
+        for _, row in linkedin_contacts.iterrows()
+        if _norm(row.get("person_name"))
+    }
+
+    merged_rows = []
+    used_linkedin_names = set()
+
+    for _, official in official_contacts.iterrows():
+        row = official.to_dict()
+        key = _norm(row.get("person_name"))
+        linkedin = linkedin_by_name.get(key)
+
+        if linkedin is not None:
+            used_linkedin_names.add(key)
+            row["linkedin_url"] = str(linkedin.get("linkedin_url", "") or "")
+            if not row.get("headline"):
+                row["headline"] = str(linkedin.get("headline", "") or "")
+            row["source_type"] = "Official site + LinkedIn"
+            row["contact_relevance_score"] = max(
+                float(row.get("contact_relevance_score", 0) or 0),
+                float(linkedin.get("contact_relevance_score", 0) or 0),
+            )
+            row["contact_confidence"] = "High"
+            row["why_contact"] = (
+                str(row.get("why_contact", "")).rstrip(", ")
+                + ", corroborated by LinkedIn profile evidence"
+            )
+
+        merged_rows.append(row)
+
+    for _, linkedin in linkedin_contacts.iterrows():
+        key = _norm(linkedin.get("person_name"))
+        if key in used_linkedin_names:
+            continue
+        merged_rows.append(linkedin.to_dict())
+
+    result = pd.DataFrame(merged_rows)
+    if result.empty:
+        return result
+
+    if "decision_authority_signal" not in result.columns:
+        result["decision_authority_signal"] = False
+    result["decision_authority_signal"] = (
+        result["decision_authority_signal"].fillna(False).astype(bool)
+    )
+
+    result = result.sort_values(
+        [
+            "decision_authority_signal",
+            "contact_relevance_score",
+            "person_name",
+        ],
+        ascending=[False, False, True],
+    ).head(max_results).reset_index(drop=True)
+
+    result["raw_profile_count"] = int(
+        linkedin_contacts.get(
+            "raw_profile_count",
+            pd.Series([len(linkedin_contacts)]),
+        ).iloc[0]
+    )
+    result["held_back_profile_count"] = int(
+        linkedin_contacts.get(
+            "held_back_profile_count",
+            pd.Series([0]),
+        ).iloc[0]
+    )
+    return result
+
+
+def discover_account_contacts(
+    company_name: str,
+    account_website: str,
+    source_url: str,
+    country: str,
+    target_roles: list[str],
+    api_key: str,
+    max_results: int = 8,
+    timeout: int = 30,
+    location_context: str = "",
+) -> pd.DataFrame:
+    official_contacts = discover_official_site_contacts(
+        company_name=company_name,
+        account_website=account_website,
+        source_url=source_url,
+        target_roles=target_roles,
+        api_key=api_key,
+        max_results=max_results,
+        timeout=timeout,
+    )
+
+    linkedin_contacts = discover_linkedin_contacts(
+        company_name=company_name,
+        country=country,
+        target_roles=target_roles,
+        api_key=api_key,
+        max_results=max_results,
+        timeout=timeout,
+        location_context=location_context,
+    )
+
+    return _merge_contact_sources(
+        official_contacts,
+        linkedin_contacts,
+        max_results=max_results,
+    )
 
 
 def _search_linkedin_people(
