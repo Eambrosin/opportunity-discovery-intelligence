@@ -3,6 +3,47 @@ from __future__ import annotations
 PROFILE_SCHEMA_VERSION = "1.0"
 
 PRESETS = {
+    "Medical Aesthetics — DELEO Test": {
+        "profile_id": "medical_aesthetics",
+        "industry": "Medical Aesthetics",
+        "countries": "Italy",
+        "regions": "Europe",
+        "business_models": (
+            "Aesthetic Medicine Clinic, Clinica di medicina estetica, "
+            "Dermatology Clinic, Studio dermatologico, "
+            "Plastic Surgery Clinic, Studio di chirurgia plastica, "
+            "Medical Practice, Studio medico, "
+            "Aesthetic Center, Centro estetico, Esthetician, Estetista"
+        ),
+        "keywords": (
+            "medicina estetica, medico estetico, dermatologia estetica, "
+            "chirurgia plastica, criolipolisi, cryolipolysis, body contouring, "
+            "laser estetico, fotobiomodulazione, LED, ringiovanimento cutaneo, "
+            "rimodellamento corpo, cellulite, skin rejuvenation"
+        ),
+        "excluded_keywords": "tattoo only, hair salon only",
+        "min_size": 0,
+        "max_size": 250,
+        "target_roles": (
+            "Titolare, Founder, Direttore Sanitario, Medical Director, "
+            "Medico Estetico, Aesthetic Physician, Dermatologo, Dermatologist, "
+            "Chirurgo Plastico, Plastic Surgeon, Clinic Manager, Practice Manager, "
+            "Estetista, Esthetician"
+        ),
+        "search_archetypes": (
+            "clinica medicina estetica, medico estetico studio, "
+            "dermatologo medicina estetica, chirurgo plastico medicina estetica, "
+            "centro estetico tecnologie, estetista trattamenti corpo, medical spa"
+        ),
+        "value_proposition": (
+            "Advanced aesthetic-medical technology supported by training, service, "
+            "marketing enablement and patient-development support."
+        ),
+        "note": (
+            "DELEO test profile for medical-aesthetics opportunity discovery in Italy. "
+            "Aesthetic centers and estheticians remain discovery candidates, but device eligibility must be validated by product classification and local professional-use requirements."
+        ),
+    },
     "Custom": {
         "profile_id": "custom",
         "industry": "Renewable Energy",
@@ -108,47 +149,7 @@ PRESETS = {
         "value_proposition": "Structured B2G business development, procurement intelligence and contract-development support.",
         "note": "",
     },
-    "Medical Aesthetics — Clinics & Practitioners (Italy)": {
-        "profile_id": "medical_aesthetics",
-        "industry": "Medical Aesthetics",
-        "countries": "Italy",
-        "regions": "Europe",
-        "business_models": (
-            "Aesthetic Medicine Clinic, Clinica di medicina estetica, "
-            "Dermatology Clinic, Studio dermatologico, "
-            "Plastic Surgery Clinic, Studio di chirurgia plastica, "
-            "Medical Practice, Studio medico, "
-            "Aesthetic Center, Centro estetico, Esthetician, Estetista"
-        ),
-        "keywords": (
-            "medicina estetica, medico estetico, dermatologia estetica, "
-            "chirurgia plastica, criolipolisi, cryolipolysis, body contouring, "
-            "laser estetico, fotobiomodulazione, LED, ringiovanimento cutaneo, "
-            "rimodellamento corpo, cellulite, skin rejuvenation"
-        ),
-        "excluded_keywords": "tattoo only, hair salon only",
-        "min_size": 0,
-        "max_size": 250,
-        "target_roles": (
-            "Titolare, Founder, Direttore Sanitario, Medical Director, "
-            "Medico Estetico, Aesthetic Physician, Dermatologo, Dermatologist, "
-            "Chirurgo Plastico, Plastic Surgeon, Clinic Manager, Practice Manager, "
-            "Estetista, Esthetician"
-        ),
-        "search_archetypes": (
-            "clinica medicina estetica, medico estetico studio, "
-            "dermatologo medicina estetica, chirurgo plastico medicina estetica, "
-            "centro estetico tecnologie, estetista trattamenti corpo, medical spa"
-        ),
-        "value_proposition": (
-            "Advanced aesthetic-medical technology supported by training, service, "
-            "marketing enablement and patient-development support."
-        ),
-        "note": (
-            "Aesthetic centers and estheticians are discovery candidates, but device eligibility "
-            "must be validated by product classification and local professional-use requirements."
-        ),
-    },
+
 }
 
 
