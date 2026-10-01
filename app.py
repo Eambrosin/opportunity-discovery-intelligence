@@ -340,6 +340,7 @@ with st.sidebar:
             scope_mode = st.radio(
                 "Territory coverage",
                 [
+                    "Milano deep dive",
                     "Priority clusters",
                     "Full territory",
                     "Custom clusters",
@@ -357,7 +358,22 @@ with st.sidebar:
                 if cluster["region"] in selected_territory_regions
             ]
 
-            if scope_mode == "Priority clusters":
+            if scope_mode == "Milano deep dive":
+                selected_cluster_ids = (
+                    ["lombardia_milano"]
+                    if "lombardia_milano" in region_cluster_ids
+                    else []
+                )
+                if selected_cluster_ids:
+                    st.caption(
+                        "Milano deep dive rotates multiple medical-aesthetics search angles "
+                        "inside the Milano cluster before expanding geographically."
+                    )
+                else:
+                    st.warning(
+                        "Milano deep dive requires Lombardia to remain selected in Regions in scope."
+                    )
+            elif scope_mode == "Priority clusters":
                 selected_cluster_ids = [
                     cid
                     for cid in priority_cluster_ids(territory)
@@ -417,8 +433,12 @@ with st.sidebar:
             )
 
         if territory_mode and territory:
-            default_queries = max(4, min(len(selected_cluster_ids), 18))
-            max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
+            if scope_mode == "Milano deep dive":
+                default_queries = 8
+                max_query_budget = 10
+            else:
+                default_queries = max(4, min(len(selected_cluster_ids), 18))
+                max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
         else:
             default_queries = 7 if "Medical Aesthetics" in preset_name else 6
             max_query_budget = 10
