@@ -116,6 +116,70 @@ class ContactDiscoveryTests(unittest.TestCase):
         self.assertTrue(correct["location_match_evidence"])
         self.assertLess(scientist["contact_relevance_score"], 55)
 
+
+    def test_org_contact_requires_real_account_identity(self):
+        unrelated = score_contact_result(
+            title="Daniela Sapienza - Receptionist - Centro Medico Specialistico Milano",
+            snippet="Novate Milanese, Lombardia, Italia.",
+            company_name="Brera Studio Medico",
+            target_roles=["Titolare", "Medical Director", "Direttore Sanitario"],
+            location_context="Milano Lombardia",
+        )
+        self.assertFalse(unrelated["account_identity_match"])
+        self.assertLess(unrelated["contact_relevance_score"], 55)
+
+    def test_exact_account_receptionist_is_entry_point_not_decision_maker(self):
+        receptionist = score_contact_result(
+            title="Maria Rossi - Receptionist | Brera Studio Medico",
+            snippet="Brera Studio Medico, Milano, Lombardia.",
+            company_name="Brera Studio Medico",
+            target_roles=["Titolare", "Medical Director", "Direttore Sanitario"],
+            location_context="Milano Lombardia",
+        )
+        self.assertTrue(receptionist["account_identity_match"])
+        self.assertGreaterEqual(receptionist["contact_relevance_score"], 55)
+        self.assertLess(receptionist["contact_relevance_score"], 75)
+
+    def test_exact_account_target_role_scores_as_decision_maker_candidate(self):
+        director = score_contact_result(
+            title="Luca Bianchi - Direttore Sanitario | Brera Studio Medico",
+            snippet="Direttore Sanitario presso Brera Studio Medico, Milano.",
+            company_name="Brera Studio Medico",
+            target_roles=["Titolare", "Medical Director", "Direttore Sanitario"],
+            location_context="Milano Lombardia",
+        )
+        self.assertTrue(director["account_identity_match"])
+        self.assertGreaterEqual(director["contact_relevance_score"], 80)
+        self.assertEqual(director["contact_confidence"], "High")
+
+    @patch("contact_discovery._search_linkedin_people")
+    def test_similar_brera_organization_profile_is_held_back(self, search):
+        search.return_value = [
+            {
+                "url": "https://it.linkedin.com/in/barbara-rivelli",
+                "title": "Barbara Rivelli - Advisor IDE Istituto Dermatologico Europeo",
+                "content": "Milano Lombardia Italia.",
+            },
+            {
+                "url": "https://it.linkedin.com/in/luca-bianchi",
+                "title": "Luca Bianchi - Direttore Sanitario | Brera Studio Medico",
+                "content": "Direttore Sanitario presso Brera Studio Medico, Milano.",
+            },
+        ]
+
+        contacts = discover_linkedin_contacts(
+            company_name="Brera Studio Medico",
+            country="Italy",
+            target_roles=["Direttore Sanitario", "Titolare"],
+            api_key="test-key",
+            max_results=8,
+            location_context="Milano Lombardia",
+        )
+
+        self.assertEqual(len(contacts), 1)
+        self.assertEqual(contacts.iloc[0]["person_name"], "Luca Bianchi")
+        self.assertTrue(bool(contacts.iloc[0]["account_identity_match"]))
+
     @patch("contact_discovery._search_linkedin_people")
     def test_contact_discovery_holds_back_weak_homonyms(self, search):
         search.return_value = [
