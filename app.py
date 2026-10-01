@@ -10,7 +10,37 @@ import streamlit as st
 
 from account_enrichment import assess_qualification_readiness, enrich_account
 from ai_insights import generate_evidence_aware_brief
-from contact_discovery import discover_account_contacts, discover_linkedin_market_professionals
+from contact_discovery import discover_linkedin_market_professionals
+
+try:
+    from contact_discovery import discover_account_contacts
+except ImportError:
+    from contact_discovery import discover_linkedin_contacts
+
+    def discover_account_contacts(
+        company_name: str,
+        account_website: str,
+        source_url: str,
+        country: str,
+        target_roles: list[str],
+        api_key: str,
+        max_results: int = 8,
+        timeout: int = 30,
+        location_context: str = "",
+    ) -> pd.DataFrame:
+        """
+        Backward-compatible fallback for Streamlit deploys that briefly load an
+        older contact_discovery.py while app.py has already advanced.
+        """
+        return discover_linkedin_contacts(
+            company_name=company_name,
+            country=country,
+            target_roles=target_roles,
+            api_key=api_key,
+            max_results=max_results,
+            timeout=timeout,
+            location_context=location_context,
+        )
 from discovery_engine import (
     TargetProfile,
     build_search_queries,
@@ -94,7 +124,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-official-site-decision-maker"
+DEPLOYMENT_REVISION = "2026-10-01-contact-import-fallback"
 
 
 def split_values(value: str) -> list[str]:
