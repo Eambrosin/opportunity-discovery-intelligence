@@ -6,6 +6,7 @@ from contact_discovery import (
     _extract_honorific_names,
     _merge_contact_sources,
     _search_linkedin_people,
+    discover_account_contacts,
     discover_linkedin_contacts,
     discover_official_site_contacts,
     score_contact_result,
@@ -163,6 +164,43 @@ class ContactDiscoveryTests(unittest.TestCase):
         ].iloc[0]
         self.assertFalse(bool(doctor["decision_authority_signal"]))
         self.assertEqual(doctor["professional_role_signal"], "medico estetico")
+
+    @patch("contact_discovery.discover_linkedin_contacts")
+    @patch("contact_discovery.discover_official_site_contacts")
+    def test_account_contact_discovery_skips_broad_linkedin_when_official_authority_exists(
+        self,
+        official_search,
+        linkedin_search,
+    ):
+        import pandas as pd
+
+        official_search.return_value = pd.DataFrame(
+            [
+                {
+                    "person_name": "Fabrizio Cecchini",
+                    "headline": "Direttore Sanitario",
+                    "source_type": "Official site",
+                    "contact_relevance_score": 100,
+                    "contact_confidence": "High",
+                    "decision_authority_signal": True,
+                    "linkedin_url": "",
+                }
+            ]
+        )
+
+        contacts = discover_account_contacts(
+            company_name="Brera Studio Medico",
+            account_website="https://www.brerastudiomedico.it",
+            source_url="https://www.brerastudiomedico.it/medicina-estetica.php",
+            country="Italy",
+            target_roles=["Direttore Sanitario", "Medico Estetico"],
+            api_key="test-key",
+            location_context="Milano Lombardia",
+        )
+
+        linkedin_search.assert_not_called()
+        self.assertEqual(len(contacts), 1)
+        self.assertTrue(bool(contacts.iloc[0]["decision_authority_signal"]))
 
     def test_merge_preserves_official_role_and_adds_linkedin_corroboration(self):
         import pandas as pd
