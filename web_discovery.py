@@ -85,6 +85,15 @@ GENERIC_SERVICE_TOKENS = {
 }
 
 
+PERSON_NAME_STOPWORDS = {
+    "la", "le", "il", "lo", "gli",
+    "nel", "nella", "nelle", "nei",
+    "dal", "dalla", "dalle",
+    "sul", "sulla", "sulle",
+    "presso", "per",
+}
+
+
 ORGANIZATION_SIGNALS = [
     "clinic",
     "clinica",
@@ -202,6 +211,8 @@ def _looks_like_person_name(value: str) -> bool:
     }
     if lowered & blocked:
         return False
+    if lowered & PERSON_NAME_STOPWORDS:
+        return False
 
     capitalized = sum(
         1
@@ -234,7 +245,7 @@ def _person_name_from_text(value: str) -> str:
 
         token = match.group(1).strip(" ,.;|-")
         normalized = token.lower().strip(".")
-        if normalized in GENERIC_SERVICE_TOKENS:
+        if normalized in GENERIC_SERVICE_TOKENS or normalized in PERSON_NAME_STOPWORDS:
             break
 
         tokens.append(token)

@@ -92,7 +92,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-milano-query-execution-fix"
+DEPLOYMENT_REVISION = "2026-10-01-milano-coverage-quality"
 
 
 def split_values(value: str) -> list[str]:
@@ -136,16 +136,18 @@ def safe_filename(value: str) -> str:
 
 
 MILANO_DEEP_DIVE_QUERY_TEMPLATES = [
+    # Baseline city-wide discovery, followed by deliberately different microzones
+    # to reduce overlap between Tavily result sets.
     "clinica medicina estetica Milano Lombardia Italy sito ufficiale",
-    "medico estetico studio Milano Lombardia Italy sito ufficiale",
-    "dermatologo medicina estetica Milano Lombardia Italy sito ufficiale",
-    "chirurgo plastico estetico Milano Lombardia Italy sito ufficiale",
-    "poliambulatorio medicina estetica Milano Lombardia Italy sito ufficiale",
-    "laser estetico dermatologia Milano Lombardia Italy sito ufficiale",
-    "criolipolisi medico estetico Milano Lombardia Italy sito ufficiale",
-    "body contouring medicina estetica Milano Lombardia Italy sito ufficiale",
-    "HIFU medicina estetica Milano Lombardia Italy sito ufficiale",
-    "skin rejuvenation medico estetico Milano Lombardia Italy sito ufficiale",
+    "medico estetico studio Milano Centro Lombardia Italy sito ufficiale",
+    "dermatologo medicina estetica Porta Venezia Milano Lombardia Italy sito ufficiale",
+    "chirurgo plastico estetico Brera Milano Lombardia Italy sito ufficiale",
+    "poliambulatorio medicina estetica Porta Nuova Milano Lombardia Italy sito ufficiale",
+    "laser estetico dermatologia CityLife Milano Lombardia Italy sito ufficiale",
+    "criolipolisi medico estetico Porta Romana Milano Lombardia Italy sito ufficiale",
+    "body contouring medicina estetica Navigli Milano Lombardia Italy sito ufficiale",
+    "HIFU medicina estetica Città Studi Milano Lombardia Italy sito ufficiale",
+    "skin rejuvenation medico estetico Isola Milano Lombardia Italy sito ufficiale",
 ]
 
 
@@ -579,6 +581,13 @@ if run:
                     "pinterest.com",
                 ],
             )
+            st.session_state.discovery_run_diagnostics = {
+                "requested_queries": int(query_budget),
+                "generated_queries": int(len(queries)),
+                "results_per_query": int(max_results),
+                "unique_raw_results": int(len(source_df)),
+                "scope_mode": scope_mode if territory_mode and territory else "",
+            }
 
         ranked_result = screen_candidates(source_df, profile)
 
@@ -719,6 +728,33 @@ m5.metric(
     "Average Discovery Score",
     f"{top['discovery_score'].mean():.1f}" if not top.empty else "0.0",
 )
+
+run_diag = st.session_state.get("discovery_run_diagnostics", {})
+if run_diag and source_mode == "Public web (Tavily)":
+    generated_queries = int(run_diag.get("generated_queries", 0) or 0)
+    results_per_query = int(run_diag.get("results_per_query", 0) or 0)
+    potential_slots = generated_queries * results_per_query
+    unique_yield = (
+        len(raw_ranked) / potential_slots * 100
+        if potential_slots > 0
+        else 0.0
+    )
+    target_retention = (
+        len(ranked) / len(raw_ranked) * 100
+        if len(raw_ranked) > 0
+        else 0.0
+    )
+    with st.expander("Discovery efficiency diagnostics", expanded=False):
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Search Result Slots", potential_slots)
+        d2.metric("Unique Result Yield", f"{unique_yield:.0f}%")
+        d3.metric("Target Retention", f"{target_retention:.0f}%")
+        d4.metric("Unique Target Accounts", len(ranked))
+        st.caption(
+            "Unique Result Yield shows how much query overlap exists before qualification. "
+            "Target Retention shows how much of the unique research set survives account screening. "
+            "Low yield suggests broader/more local search angles; low retention suggests noisy search results."
+        )
 
 if not held_back.empty:
     with st.expander(
@@ -1218,14 +1254,17 @@ with st.container(border=True):
     st.markdown("### 🚗 Field Decision Brief")
     fd1, fd2 = st.columns(2)
     with fd1:
-        st.markdown(
-            f"**VISIT DECISION**  \\n{field_decision} · {field_location} · {field_score:.0f}/100"
-        )
-        st.markdown(f"**WHY NOW**  \\n{why_now}")
-        st.markdown(f"**NEXT ACTION**  \\n{field_next_action}")
+        st.markdown("**VISIT DECISION**")
+        st.markdown(f"{field_decision} · {field_location} · {field_score:.0f}/100")
+        st.markdown("**WHY NOW**")
+        st.markdown(why_now)
+        st.markdown("**NEXT ACTION**")
+        st.markdown(field_next_action)
     with fd2:
-        st.markdown(f"**DELEO HYPOTHESIS**  \\n{deleo_hypothesis}")
-        st.markdown(f"**WHAT TO DISCOVER**  \\n{validation_focus}")
+        st.markdown("**DELEO HYPOTHESIS**")
+        st.markdown(deleo_hypothesis)
+        st.markdown("**WHAT TO DISCOVER**")
+        st.markdown(validation_focus)
 
 if territory_mode and "account_opportunity_score" in selected.index:
     w1, w2, w3, w4, w5 = st.columns(5)
