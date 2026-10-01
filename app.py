@@ -1773,8 +1773,9 @@ else:
 
 st.subheader("Public Decision-Maker & Contact Validation")
 st.caption(
-    "Searches the verified account website first for named professionals and explicit authority roles, "
-    "then uses publicly indexed LinkedIn evidence as complementary corroboration. Weak homonyms are held back; "
+    "Searches the verified account website first for named professionals and explicit authority roles. "
+    "If authority is not established there, publicly indexed LinkedIn evidence is used as a complementary path. "
+    "Weak homonyms are held back; "
     "the workflow does not log into LinkedIn, scrape private pages or claim unverified contact details."
 )
 
