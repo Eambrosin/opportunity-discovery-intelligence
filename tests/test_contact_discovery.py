@@ -162,7 +162,7 @@ class ContactDiscoveryTests(unittest.TestCase):
             contacts["person_name"] == "Maria Teresa Grecchi"
         ].iloc[0]
         self.assertFalse(bool(doctor["decision_authority_signal"]))
-        self.assertIn("Medico Estetico", doctor["matched_target_roles"])
+        self.assertEqual(doctor["professional_role_signal"], "medico estetico")
 
     def test_merge_preserves_official_role_and_adds_linkedin_corroboration(self):
         import pandas as pd
