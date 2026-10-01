@@ -84,6 +84,38 @@ class OpportunityDiscoveryTests(unittest.TestCase):
         unrelated = ranked[ranked["company_name"] == "Unrelated Company"].iloc[0]
         self.assertGreater(strong["discovery_score"], unrelated["discovery_score"])
 
+    def test_handoff_preserves_decision_maker_authority_evidence(self):
+        ranked = pd.DataFrame(
+            [
+                {
+                    "company_name": "Brera Studio Medico",
+                    "country": "Italy",
+                    "region": "Europe",
+                    "industry": "Medical Aesthetics",
+                    "qualification_ready": True,
+                    "decision_maker_name": "Fabrizio Cecchini",
+                    "decision_maker_headline": "Direttore Sanitario",
+                    "decision_maker_source_url": "https://www.brerastudiomedico.it/team",
+                    "decision_maker_source_type": "Official site",
+                    "decision_maker_authority_signal": True,
+                    "decision_maker_verified": True,
+                    "discovery_score": 70,
+                    "confidence": "High",
+                    "source_url": "https://www.brerastudiomedico.it",
+                    "account_identity_score": 90,
+                    "account_identity_status": "Verified organization",
+                }
+            ]
+        )
+
+        handoff = qualification_handoff(ranked)
+        row = handoff.iloc[0]
+
+        self.assertEqual(row["decision_maker_name"], "Fabrizio Cecchini")
+        self.assertEqual(row["decision_maker_headline"], "Direttore Sanitario")
+        self.assertEqual(row["decision_maker_source_type"], "Official site")
+        self.assertTrue(bool(row["decision_maker_authority_signal"]))
+
     def test_handoff_is_qualification_compatible_template(self):
         ranked = screen_candidates(self.data, self.profile)
         handoff = qualification_handoff(ranked)
