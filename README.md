@@ -234,10 +234,21 @@ Secrets should be supplied through environment variables or Streamlit secrets an
 
 ---
 
+## Current Version
+
+**v1.0.0 — Evidence-Aware Opportunity Discovery Intelligence**
+
+This is the first stable portfolio build, covering public-web discovery, account ranking, Qualification Readiness, enrichment, public-contact validation, Sales Intelligence and ENGAGE Handoff v2.
+
+[Release Notes](docs/RELEASE_NOTES_v1.0.0.md)
+
+---
+
 ## Documentation
 
 - [Portfolio Demo Walkthrough](docs/PORTFOLIO_DEMO.md)
 - [Detailed Technical Reference](docs/TECHNICAL_REFERENCE.md)
+- [v1.0.0 Release Notes](docs/RELEASE_NOTES_v1.0.0.md)
 
 ---
 
