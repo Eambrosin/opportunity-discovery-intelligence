@@ -34,16 +34,17 @@ Capture:
 - direct website / public contact path
 - evidence completeness
 
-## 04 — Public Contact & LinkedIn Validation
+## 04 — Sales Intelligence & Qualification Context
 
-**Repository filename:** `screenshots/04-linkedin-validation.png`
+**Repository filename:** `screenshots/04-sales-intelligence.png`
 
 Capture:
-- plausible LinkedIn match
-- contact relevance / confidence
-- professional-role signal
-- location-match evidence
-- held-back homonym count if visible
+- Sales Motion
+- Buyer Access
+- commercial hypothesis / angle
+- qualification questions
+- evidence gaps and validation flags
+- next best action
 
 ## Presentation Rules
 
