@@ -66,29 +66,14 @@ A high-opportunity account is not automatically treated as a buying account.
 
 ## Product Preview
 
-### 1. Discovery Executive Summary
+The recommended demo sequence is:
 
-![Discovery Executive Summary](screenshots/01-discovery-summary.png)
+1. **Discovery Executive Summary** — raw search volume, target-account candidates, held-back research results and Qualification Readiness.
+2. **Target Account Ranking** — explainable account opportunity ranking with research/vendor results kept outside the commercial shortlist.
+3. **Account Enrichment & Qualification** — direct website, public contact path and research-completeness evidence.
+4. **Public Contact & LinkedIn Validation** — plausible professional match, role/location evidence and held-back homonyms.
 
-See raw search volume, target-account candidates, held-back research results, confidence and qualification-readiness distribution.
-
-### 2. Target Account Ranking
-
-![Target Account Ranking](screenshots/02-target-account-ranking.png)
-
-Rank account candidates using explainable opportunity logic while keeping research-only and partner/vendor results outside the commercial shortlist.
-
-### 3. Account Enrichment & Qualification
-
-![Account Enrichment](screenshots/03-account-enrichment.png)
-
-Validate the direct account website, public address/contact path and research completeness before treating the account as outreach-ready.
-
-### 4. Public Contact & LinkedIn Validation
-
-![LinkedIn Contact Validation](screenshots/04-linkedin-validation.png)
-
-Use public indexed evidence to identify a plausible professional profile while holding back weak homonyms and preserving match rationale.
+A screenshot set from the validated Medical Aesthetics demo is prepared for the repository; see [docs/SCREENSHOT_PLAN.md](docs/SCREENSHOT_PLAN.md).
 
 ---
 
