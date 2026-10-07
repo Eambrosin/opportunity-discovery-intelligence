@@ -261,7 +261,11 @@ def _recommended_action(score: float, confidence: float) -> str:
 
 
 def _professional_setting_signal(evidence: str, industry: str) -> str:
-    if "medical aesthetic" not in _norm(industry):
+    normalized_industry = _norm(industry)
+    if (
+        "medical aesthetic" not in normalized_industry
+        and "medicina estetica" not in normalized_industry
+    ):
         return ""
 
     normalized = _norm(evidence)
@@ -298,6 +302,105 @@ def _medical_aesthetics_entity_classification(
     evidence: str,
     profile: TargetProfile,
 ) -> dict:
+    if profile.market_profile_id == "photovoltaic_energy_consumers":
+        identity_raw = row.get("qualification_ready", True)
+        if isinstance(identity_raw, bool):
+            identity_ready = identity_raw
+        else:
+            identity_ready = str(identity_raw).strip().lower() in {"true", "1", "yes"}
+
+        identity_status = _norm(row.get("account_identity_status"))
+        normalized = _norm(evidence)
+
+        if not identity_ready or any(
+            token in identity_status
+            for token in [
+                "directory marketplace",
+                "content document",
+                "account identity unclear",
+            ]
+        ):
+            return {
+                "commercial_track": "Held-back Research Result",
+                "target_account_ready": False,
+                "target_account_reason": "Account identity is not strong enough for qualification",
+            }
+
+        solar_vendor_terms = [
+            "installatore fotovoltaico",
+            "solar installer",
+            "distributore fotovoltaico",
+            "photovoltaic distributor",
+            "grossista fotovoltaico",
+            "epc fotovoltaico",
+            "impianti fotovoltaici chiavi in mano",
+            "vendita pannelli solari",
+            "rivenditore pannelli solari",
+        ]
+        if any(term in normalized for term in solar_vendor_terms):
+            return {
+                "commercial_track": "Solar Vendor / EPC — Not End Customer",
+                "target_account_ready": False,
+                "target_account_reason": "Looks like a photovoltaic supplier, installer or EPC rather than an energy-consuming end customer",
+            }
+
+        high_consumption_signals = [
+            "stabilimento",
+            "impianto produttivo",
+            "produzione",
+            "manufacturing",
+            "factory",
+            "plant",
+            "capannone",
+            "forno industriale",
+            "refrigerazione",
+            "celle frigorifere",
+            "cold storage",
+            "compressori",
+            "centro logistico",
+            "warehouse",
+            "supermercato",
+            "ipermercato",
+            "gdo",
+            "hotel",
+            "resort",
+            "ospedale privato",
+            "private hospital",
+            "data center",
+            "cartiera",
+            "ceramica",
+            "vetro",
+            "metallurgia",
+            "fonderia",
+            "industria alimentare",
+            "caseificio",
+            "chimica",
+            "plastica",
+            "serra",
+            "greenhouse",
+        ]
+        observed = [term for term in high_consumption_signals if term in normalized]
+
+        if observed:
+            return {
+                "commercial_track": "C&I Energy Consumer Target",
+                "target_account_ready": True,
+                "target_account_reason": (
+                    "Public operational signals suggest a potentially energy-intensive "
+                    "commercial or industrial site; actual load and photovoltaic feasibility "
+                    "must be qualified."
+                ),
+            }
+
+        return {
+            "commercial_track": "Potential C&I Energy Consumer — Validate Load",
+            "target_account_ready": True,
+            "target_account_reason": (
+                "Company identity is usable, but electricity consumption, load profile, "
+                "available surface and photovoltaic feasibility remain unverified."
+            ),
+        }
+
     if profile.market_profile_id != "medical_aesthetics":
         identity_ready = row.get("qualification_ready", True)
         return {
@@ -483,6 +586,52 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
             industry_score = 100.0
             industry_matches = list(
                 dict.fromkeys(industry_matches + observed_industry_terms)
+            )
+
+    if profile.market_profile_id == "photovoltaic_energy_consumers":
+        energy_consumer_terms = [
+            "stabilimento",
+            "impianto produttivo",
+            "produzione",
+            "manufacturing",
+            "factory",
+            "plant",
+            "capannone",
+            "forno industriale",
+            "refrigerazione",
+            "celle frigorifere",
+            "cold storage",
+            "centro logistico",
+            "warehouse",
+            "supermercato",
+            "ipermercato",
+            "gdo",
+            "hotel",
+            "resort",
+            "ospedale privato",
+            "private hospital",
+            "data center",
+            "cartiera",
+            "ceramica",
+            "vetro",
+            "metallurgia",
+            "fonderia",
+            "industria alimentare",
+            "caseificio",
+            "chimica",
+            "plastica",
+            "serra",
+            "greenhouse",
+        ]
+        observed_energy_terms = [
+            term
+            for term in energy_consumer_terms
+            if term in _norm(industry_source)
+        ]
+        if observed_energy_terms:
+            industry_score = 100.0
+            industry_matches = list(
+                dict.fromkeys(industry_matches + observed_energy_terms)
             )
 
     geo_source = " ".join([
