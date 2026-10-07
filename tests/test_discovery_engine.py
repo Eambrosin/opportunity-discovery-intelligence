@@ -84,6 +84,78 @@ class OpportunityDiscoveryTests(unittest.TestCase):
         unrelated = ranked[ranked["company_name"] == "Unrelated Company"].iloc[0]
         self.assertGreater(strong["discovery_score"], unrelated["discovery_score"])
 
+    def test_photovoltaic_profile_prioritizes_energy_consuming_end_customer(self):
+        profile = TargetProfile(
+            industry="Aziende ad Alto Consumo Energetico",
+            market_profile_id="photovoltaic_energy_consumers",
+            countries=["Italy"],
+            regions=["Europe"],
+            business_models=[
+                "Industrial Manufacturer",
+                "Food & Beverage Manufacturer",
+                "Cold Storage",
+                "Logistics Center",
+                "Supermarket",
+                "Hotel",
+                "Data Center",
+            ],
+            required_keywords=[
+                "stabilimento",
+                "refrigerazione",
+                "centro logistico",
+                "data center",
+            ],
+            excluded_keywords=[
+                "installatore fotovoltaico",
+                "distributore fotovoltaico",
+                "EPC fotovoltaico",
+            ],
+            min_company_size=10,
+            max_company_size=10000,
+        )
+
+        candidates = pd.DataFrame(
+            [
+                {
+                    "company_name": "Alfa Food Industries",
+                    "country": "Italy",
+                    "region": "Europe",
+                    "industry": "Food Manufacturing",
+                    "business_model": "Industrial Manufacturer",
+                    "company_size": 240,
+                    "source_title": "Alfa Food Industries | Stabilimento produttivo",
+                    "source_snippet": (
+                        "Industria alimentare con stabilimento produttivo, linee di "
+                        "refrigerazione e celle frigorifere operative in Italia."
+                    ),
+                    "source_url": "https://example.com/alfa",
+                },
+                {
+                    "company_name": "Solar EPC Italia",
+                    "country": "Italy",
+                    "region": "Europe",
+                    "industry": "Renewable Energy",
+                    "business_model": "EPC",
+                    "company_size": 80,
+                    "source_title": "Solar EPC Italia | Impianti fotovoltaici chiavi in mano",
+                    "source_snippet": (
+                        "Installatore fotovoltaico ed EPC fotovoltaico per aziende."
+                    ),
+                    "source_url": "https://example.com/solar-epc",
+                },
+            ]
+        )
+
+        ranked = screen_candidates(candidates, profile)
+        target = ranked[ranked["company_name"] == "Alfa Food Industries"].iloc[0]
+        vendor = ranked[ranked["company_name"] == "Solar EPC Italia"].iloc[0]
+
+        self.assertEqual(target["commercial_track"], "C&I Energy Consumer Target")
+        self.assertTrue(bool(target["target_account_ready"]))
+        self.assertGreater(target["discovery_score"], vendor["discovery_score"])
+        self.assertEqual(vendor["recommended_action"], "Exclude")
+        self.assertFalse(bool(vendor["target_account_ready"]))
+
     def test_handoff_preserves_decision_maker_authority_evidence(self):
         ranked = pd.DataFrame(
             [
