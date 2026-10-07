@@ -5,7 +5,7 @@ PROFILE_SCHEMA_VERSION = "1.0"
 PRESETS = {
     "Fotovoltaico — Distributori & EPC": {
             "profile_id": "renewable_energy",
-            "industry": "Renewable Energy",
+            "industry": "Fotovoltaico",
             "countries": "Italy, France",
             "regions": "Europe",
             "business_models": "Distributor, Wholesaler, EPC, Energy Solutions Provider",
@@ -136,7 +136,7 @@ PRESETS = {
         },
         "Custom": {
             "profile_id": "custom",
-            "industry": "Fotovoltaico",
+            "industry": "Renewable Energy",
             "countries": "Italy, France",
             "regions": "Europe",
             "business_models": "Distributor, Wholesaler",
