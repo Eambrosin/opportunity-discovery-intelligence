@@ -494,7 +494,7 @@ with st.sidebar:
                 default_queries = max(4, min(len(selected_cluster_ids), 18))
                 max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
         else:
-            default_queries = 7 if "Medical Aesthetics" in preset_name else 6
+            default_queries = 7 if profile_id_for(preset_name) == "medical_aesthetics" else 6
             max_query_budget = 10
 
         query_budget = st.slider(
@@ -511,7 +511,7 @@ with st.sidebar:
             "Results per query",
             min_value=3,
             max_value=10,
-            value=6 if "Medical Aesthetics" in preset_name else 4,
+            value=6 if profile_id_for(preset_name) == "medical_aesthetics" else 4,
             help=(
                 "For a focused Milano deep dive, 6–8 results per query can materially improve "
                 "account density. Broader settings consume more search credits."
