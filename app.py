@@ -152,7 +152,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-01-decision-maker-field-visibility"
+DEPLOYMENT_REVISION = "2026-10-07-preset-order-and-labels"
 
 
 def split_values(value: str) -> list[str]:
@@ -383,13 +383,7 @@ with st.sidebar:
             vendor_name = st.selectbox(
                 "Commercial program",
                 list(VENDOR_PROFILES.keys()),
-                index=(
-                    list(VENDOR_PROFILES.keys()).index(
-                        "DELEO — North Italy Commercial Program"
-                    )
-                    if "DELEO — North Italy Commercial Program" in VENDOR_PROFILES
-                    else 0
-                ),
+                index=0,
                 help=(
                     "Vendor profiles add discussion themes and technology-fit signals "
                     "without turning evidence into unsupported product recommendations."
