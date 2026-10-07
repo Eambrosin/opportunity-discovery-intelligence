@@ -152,7 +152,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-07-preset-order-and-labels"
+DEPLOYMENT_REVISION = "2026-10-07-photovoltaic-energy-consumers"
 
 
 def split_values(value: str) -> list[str]:
@@ -494,7 +494,13 @@ with st.sidebar:
                 default_queries = max(4, min(len(selected_cluster_ids), 18))
                 max_query_budget = max(8, min(max(len(selected_cluster_ids), 8), 24))
         else:
-            default_queries = 7 if profile_id_for(preset_name) == "medical_aesthetics" else 6
+            profile_id = profile_id_for(preset_name)
+            if profile_id == "medical_aesthetics":
+                default_queries = 7
+            elif profile_id == "photovoltaic_energy_consumers":
+                default_queries = 10
+            else:
+                default_queries = 6
             max_query_budget = 10
 
         query_budget = st.slider(
@@ -511,7 +517,14 @@ with st.sidebar:
             "Results per query",
             min_value=3,
             max_value=10,
-            value=6 if profile_id_for(preset_name) == "medical_aesthetics" else 4,
+            value=(
+                6
+                if profile_id_for(preset_name) in {
+                    "medical_aesthetics",
+                    "photovoltaic_energy_consumers",
+                }
+                else 4
+            ),
             help=(
                 "For a focused Milano deep dive, 6–8 results per query can materially improve "
                 "account density. Broader settings consume more search credits."
