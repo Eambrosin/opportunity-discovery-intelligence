@@ -3,21 +3,66 @@ from __future__ import annotations
 PROFILE_SCHEMA_VERSION = "1.0"
 
 PRESETS = {
-    "Fotovoltaico — Distributori & EPC": {
-            "profile_id": "renewable_energy",
-            "industry": "Fotovoltaico",
-            "countries": "Italy, France",
-            "regions": "Europe",
-            "business_models": "Distributor, Wholesaler, EPC, Energy Solutions Provider",
-            "keywords": "solar, photovoltaic, storage, inverter, battery, renewable energy",
-            "excluded_keywords": "residential installer only",
-            "min_size": 20,
-            "max_size": 1000,
-            "target_roles": "Commercial Director, Business Development, Procurement, Purchasing, Partnerships",
-            "search_archetypes": "solar distributor, photovoltaic wholesaler, EPC renewable energy, energy storage distributor",
-            "value_proposition": "Cross-border commercial development, sourcing and market-expansion support.",
-            "note": "",
-        },
+    "Fotovoltaico — Aziende ad Alto Consumo Energetico": {
+        "profile_id": "photovoltaic_energy_consumers",
+        "industry": "Aziende ad Alto Consumo Energetico",
+        "countries": "Italy",
+        "regions": "Europe",
+        "business_models": (
+            "Industrial Manufacturer, Stabilimento Produttivo, Industria Alimentare, "
+            "Food & Beverage Manufacturer, Cold Storage, Celle Frigorifere, "
+            "Logistics Center, Warehouse, Centro Logistico, "
+            "Supermarket, GDO, Ipermercato, Hotel, Resort, "
+            "Private Hospital, Healthcare Facility, Data Center, "
+            "Cartiera, Ceramica, Vetro, Metallurgia, Fonderia, "
+            "Chemical Industry, Plastics, Agricultural Processor, Greenhouse"
+        ),
+        "keywords": (
+            "stabilimento, produzione, capannone, impianto produttivo, "
+            "forno industriale, refrigerazione, celle frigorifere, compressori, "
+            "magazzino, centro logistico, supermercato, ipermercato, GDO, "
+            "hotel, resort, ospedale privato, data center, cartiera, ceramica, "
+            "vetro, metallurgia, fonderia, industria alimentare, caseificio, "
+            "plastica, chimica, serra, consumo energetico, energia elettrica"
+        ),
+        "excluded_keywords": (
+            "installatore fotovoltaico, solar installer, distributore fotovoltaico, "
+            "photovoltaic distributor, grossista fotovoltaico, EPC fotovoltaico, "
+            "impianti fotovoltaici chiavi in mano, vendita pannelli solari, "
+            "rivenditore pannelli solari"
+        ),
+        "min_size": 10,
+        "max_size": 10000,
+        "target_roles": (
+            "Titolare, Amministratore Delegato, CEO, Direttore Generale, "
+            "Energy Manager, Facility Manager, Operations Director, Operations Manager, "
+            "Plant Manager, Direttore di Stabilimento, Direttore Tecnico, "
+            "Responsabile Manutenzione, Sustainability Manager, ESG Manager, "
+            "Procurement Manager, Purchasing Manager, CFO"
+        ),
+        "search_archetypes": (
+            "azienda energivora stabilimento industriale, "
+            "azienda manifatturiera stabilimento produttivo, "
+            "industria alimentare stabilimento, caseificio industriale, "
+            "celle frigorifere cold storage, centro logistico magazzino, "
+            "GDO supermercati ipermercati, hotel resort gruppo, "
+            "ospedale privato struttura sanitaria, data center, "
+            "cartiera, industria ceramica, vetreria industriale, "
+            "acciaieria fonderia metallurgia, industria chimica plastica, "
+            "serra agricola azienda agroindustriale"
+        ),
+        "value_proposition": (
+            "Riduzione dei costi energetici e maggiore prevedibilità della spesa "
+            "attraverso soluzioni fotovoltaiche C&I per autoconsumo, con eventuale "
+            "storage e valutazione tecnico-economica."
+        ),
+        "note": (
+            "Target: aziende e strutture con probabile consumo elettrico elevato e potenziale "
+            "per fotovoltaico C&I. Il consumo reale, la superficie disponibile, il profilo di carico "
+            "e la fattibilità tecnica restano da qualificare: i segnali pubblici indicano priorità "
+            "commerciale, non un consumo energetico verificato."
+        ),
+    },
         "Medicina Estetica": {
             "profile_id": "medical_aesthetics",
             "industry": "Medicina Estetica",
