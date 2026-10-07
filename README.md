@@ -102,7 +102,7 @@ The workflow converts observed evidence into Sales Motion, Buyer Access, qualifi
 - Qualification Readiness scoring
 - selective Account Enrichment
 - direct website and public-contact evidence
-- treatment / technology evidence tracking
+- sector-specific operational / technology evidence tracking
 - public LinkedIn person-profile validation
 - homonym filtering using identity + role + location
 - deterministic Sales Intelligence
@@ -129,19 +129,53 @@ Potentially relevant but still requiring validation.
 **Unknown**  
 Information that should not be silently converted into a score or claim.
 
-This is especially important for company size, buying intent, installed equipment, decision authority and technology eligibility.
+This is especially important for company size, buying intent, energy consumption, installed equipment, decision authority and technical eligibility.
 
 ---
 
-## Medical Aesthetics Demonstration
+## Sector Demonstrations
 
-The repository includes a North Italy Medical Aesthetics demonstration with territory intelligence across Lombardia, Veneto and Trentino-Alto Adige.
+The same discovery engine can be configured for different commercial motions without changing its evidence-aware design.
 
-A DELEO commercial-program preset is used as a **portfolio demonstration based on publicly available information**.
+### 1. Fotovoltaico — Aziende ad Alto Consumo Energetico
 
-> **Affiliation note:** This project is not affiliated with, sponsored by or endorsed by DELEO. Company/product context is used solely to demonstrate how the generic discovery engine can adapt to a real commercial scenario using public information.
+The default preset now focuses on **commercial and industrial end customers** that may have a strong economic case for on-site photovoltaic generation.
 
-The generic engine is not limited to Medical Aesthetics or to a single company.
+Typical target categories include:
+
+- industrial and manufacturing plants
+- food & beverage production
+- cold storage and refrigeration
+- logistics centers and warehouses
+- supermarkets / GDO
+- hotels and resorts
+- private hospitals and healthcare facilities
+- data centers
+- paper, ceramic, glass, metals, foundries, chemicals and plastics
+- agro-industrial operations and greenhouses
+
+The objective is to discover **potential photovoltaic buyers**, not photovoltaic suppliers.
+
+Installers, photovoltaic distributors, wholesalers and EPC providers are explicitly treated as non-target signals for this preset.
+
+Public operational evidence such as production facilities, refrigeration, industrial processes, warehouses or other energy-intensive activities can increase commercial relevance. However, the application does **not** claim verified energy consumption.
+
+Actual electricity load, load profile, roof / land availability, self-consumption potential, technical feasibility and investment timing remain qualification questions.
+
+Possible account states include:
+
+- **C&I Energy Consumer Target** — public operational signals support deeper commercial qualification
+- **Potential C&I Energy Consumer — Validate Load** — company identity is usable, but energy demand and photovoltaic feasibility remain unverified
+
+### 2. Medicina Estetica
+
+A second preset supports opportunity discovery in the Italian **Medicina Estetica** market.
+
+It includes localized search archetypes, practitioner / clinic classification, public-contact discovery and, where relevant, territory intelligence for Northern Italy.
+
+The default commercial program is generic. Any vendor-specific context must be selected explicitly and is treated as an optional commercial-planning layer rather than as the identity of the application.
+
+The generic engine is not limited to photovoltaic or medical-aesthetics use cases.
 
 ---
 
@@ -238,7 +272,7 @@ Secrets should be supplied through environment variables or Streamlit secrets an
 
 **v1.0.0 — Evidence-Aware Opportunity Discovery Intelligence**
 
-This is the first stable portfolio build, covering public-web discovery, account ranking, Qualification Readiness, enrichment, public-contact validation, Sales Intelligence and ENGAGE Handoff v2.
+This is the first stable portfolio release, covering public-web discovery, account ranking, Qualification Readiness, enrichment, public-contact validation, Sales Intelligence and ENGAGE Handoff v2. The main branch also includes post-release preset refinements for photovoltaic C&I end-customer discovery and Medicina Estetica.
 
 [Release Notes](docs/RELEASE_NOTES_v1.0.0.md)
 
