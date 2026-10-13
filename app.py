@@ -688,6 +688,8 @@ profile = TargetProfile(
     max_company_size=int(max_size) if max_size else None,
     target_roles=split_values(target_roles_text),
     search_archetypes=split_values(search_archetypes_text),
+    target_partner_types=split_values(mandate_target_partner_types),
+    counterparty_focus=mandate_counterparty_focus,
     value_proposition=value_proposition,
 )
 
