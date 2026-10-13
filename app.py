@@ -2510,6 +2510,11 @@ else:
                 ),
             }
         )
+        for mandate_field in MANDATE_FIELDS:
+            outreach_handoff[mandate_field] = safe_text(
+                selected.get(mandate_field, "")
+            )
+
         handoff_col, engage_col = st.columns(2)
         with handoff_col:
             st.download_button(
