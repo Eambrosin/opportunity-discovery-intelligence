@@ -51,6 +51,8 @@ class TargetProfile:
     max_company_size: int | None = None
     target_roles: list[str] = field(default_factory=list)
     search_archetypes: list[str] = field(default_factory=list)
+    target_partner_types: list[str] = field(default_factory=list)
+    counterparty_focus: str = "Buyers"
     value_proposition: str = ""
     weights: dict[str, float] = field(default_factory=lambda: DEFAULT_WEIGHTS.copy())
 
@@ -137,7 +139,14 @@ def build_search_queries(profile: TargetProfile, max_queries: int = 8) -> list[s
     for market in markets:
         add([industry, market])
 
-    discovery_terms = archetypes or models
+    focus = _norm(profile.counterparty_focus)
+    partner_types = [item for item in profile.target_partner_types if _text(item)]
+    if "partner" in focus and "buyer" in focus:
+        discovery_terms = list(dict.fromkeys(archetypes + models + partner_types))
+    elif "partner" in focus:
+        discovery_terms = list(dict.fromkeys(partner_types + archetypes + models))
+    else:
+        discovery_terms = archetypes or models
     for index, term in enumerate(discovery_terms):
         market = markets[index % len(markets)] if markets else ""
         keyword = keywords[index % len(keywords)] if keywords else ""
@@ -405,10 +414,28 @@ def _medical_aesthetics_entity_classification(
 
     if profile.market_profile_id != "medical_aesthetics":
         identity_ready = row.get("qualification_ready", True)
+        focus = _norm(profile.counterparty_focus)
+        normalized = _norm(evidence)
+
+        partner_match = any(
+            term in normalized
+            for term in _tokens(profile.target_partner_types)
+        )
+
+        if "partner" in focus and "buyer" not in focus:
+            track = "Partner Candidate"
+            reason = "Mandate is configured for route-to-market / partner development"
+        elif "partner" in focus and "buyer" in focus and partner_match:
+            track = "Partner Candidate"
+            reason = "Public evidence matches one of the mandate partner types"
+        else:
+            track = "Buyer Candidate"
+            reason = "Mandate is configured for buyer / end-customer development"
+
         return {
-            "commercial_track": "Target Account",
+            "commercial_track": track,
             "target_account_ready": bool(identity_ready),
-            "target_account_reason": "Generic market account workflow",
+            "target_account_reason": reason,
         }
 
     identity_raw = row.get("qualification_ready", True)
@@ -651,8 +678,18 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
         _text(row.get("source_title")),
         _text(row.get("source_snippet")),
     ])
+    focus = _norm(profile.counterparty_focus)
+    if "partner" in focus and "buyer" in focus:
+        business_targets = list(
+            dict.fromkeys(profile.business_models + profile.target_partner_types)
+        )
+    elif "partner" in focus:
+        business_targets = profile.target_partner_types or profile.business_models
+    else:
+        business_targets = profile.business_models
+
     business_score, business_matches = _match_score(
-        business_source, profile.business_models
+        business_source, business_targets
     )
 
     keyword_score, keyword_matches = _keyword_score(
