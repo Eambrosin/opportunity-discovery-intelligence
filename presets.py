@@ -63,6 +63,85 @@ PRESETS = {
             "commerciale, non un consumo energetico verificato."
         ),
     },
+        "Macchinari & Attrezzature — Brasile": {
+            "profile_id": "industrial_machinery_brazil",
+            "industry": "Macchinari e Attrezzature Industriali",
+            "countries": "Brazil",
+            "regions": "LATAM",
+            "business_models": (
+                "Industrial Manufacturer, Food Manufacturer, Beverage Manufacturer, "
+                "Packaging Company, Process Industry, Pharmaceutical Manufacturer, "
+                "Chemical Manufacturer, Metalworking Company, Automotive Supplier, "
+                "Industrial End User"
+            ),
+            "keywords": (
+                "linha de produção, automação industrial, máquinas industriais, "
+                "equipamentos industriais, embalagem, envase, processamento, "
+                "modernização de planta, produtividade, capacidade produtiva, "
+                "manutenção industrial, expansão fabril"
+            ),
+            "excluded_keywords": (
+                "marketplace de máquinas usadas, leilão de máquinas, emprego, vagas"
+            ),
+            "min_size": 20,
+            "max_size": 10000,
+            "target_roles": (
+                "Diretor Industrial, Diretor de Operações, Diretor Técnico, "
+                "Gerente Industrial, Gerente de Produção, Gerente de Engenharia, "
+                "Plant Manager, Operations Director, Engineering Manager, "
+                "Procurement Manager, Purchasing Manager, CEO, Owner"
+            ),
+            "search_archetypes": (
+                "indústria alimentícia linha de produção, fabricante de bebidas planta industrial, "
+                "empresa de embalagens produção industrial, indústria farmacêutica produção, "
+                "indústria química planta, metalúrgica automação industrial, "
+                "fabricante componentes automotivos planta, indústria processamento equipamentos"
+            ),
+            "value_proposition": (
+                "European industrial machinery and equipment supported by structured buyer development, "
+                "commercial viability screening and local route-to-market coordination in Brazil."
+            ),
+            "note": (
+                "Use the Commercial Mandate to specify the exact machine, application and buyer profile. "
+                "For partner development, add distributor, sales-agent, integrator and technical-service "
+                "profiles to the mandate and switch Discovery focus to Partners or Buyers + Partners."
+            ),
+        },
+        "Caffè Specialty — Europa": {
+            "profile_id": "specialty_coffee_europe",
+            "industry": "Specialty Coffee",
+            "countries": "Italy, Germany, Belgium",
+            "regions": "Europe",
+            "business_models": (
+                "Coffee Importer, Specialty Coffee Roaster, Green Coffee Buyer, "
+                "Coffee Distributor, Specialty Roastery, Food Importer"
+            ),
+            "keywords": (
+                "specialty coffee, green coffee, arabica, single origin, direct trade, "
+                "Brazil coffee, Brazilian coffee, specialty roaster, green coffee importer"
+            ),
+            "excluded_keywords": "instant coffee only, vending only",
+            "min_size": 5,
+            "max_size": 5000,
+            "target_roles": (
+                "Green Coffee Buyer, Head of Coffee, Procurement Manager, Import Manager, "
+                "Sourcing Manager, Roastery Owner, Managing Director, Commercial Director"
+            ),
+            "search_archetypes": (
+                "importatore caffè verde specialty, torrefazione specialty coffee, "
+                "green coffee importer, specialty coffee roaster, Rohkaffee Importeur, "
+                "Kaffeerösterei specialty, importateur café vert specialty"
+            ),
+            "value_proposition": (
+                "Brazilian specialty-coffee origination supported by buyer development, "
+                "commercial qualification and cross-border trade coordination."
+            ),
+            "note": (
+                "The preset identifies potential European importers, roasters and green-coffee buyers. "
+                "Quality, certifications, crop availability, pricing, logistics and buyer interest "
+                "remain qualification items."
+            ),
+        },
         "Medicina Estetica": {
             "profile_id": "medical_aesthetics",
             "industry": "Medicina Estetica",
