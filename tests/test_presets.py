@@ -25,6 +25,20 @@ class PresetTests(unittest.TestCase):
         self.assertIn("energy manager", preset["target_roles"].lower())
         self.assertIn("installatore fotovoltaico", preset["excluded_keywords"].lower())
 
+
+    def test_machinery_brazil_preset(self):
+        preset = get_preset("Macchinari & Attrezzature — Brasile")
+        self.assertEqual(preset["profile_id"], "industrial_machinery_brazil")
+        self.assertEqual(preset["countries"], "Brazil")
+        self.assertIn("Diretor Industrial", preset["target_roles"])
+        self.assertIn("linha de produção", preset["keywords"].lower())
+
+    def test_specialty_coffee_europe_preset(self):
+        preset = get_preset("Caffè Specialty — Europa")
+        self.assertEqual(preset["profile_id"], "specialty_coffee_europe")
+        self.assertIn("Italy", preset["countries"])
+        self.assertIn("green coffee buyer", preset["target_roles"].lower())
+
     def test_medicina_estetica_keeps_medical_aesthetics_profile_id(self):
         preset = get_preset("Medicina Estetica")
         self.assertEqual(preset["profile_id"], "medical_aesthetics")
