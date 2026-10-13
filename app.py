@@ -779,6 +779,52 @@ profile = TargetProfile(
     value_proposition=value_proposition,
 )
 
+st.subheader("Commercial Mandate Overview")
+overview_1, overview_2, overview_3 = st.columns(3)
+
+with overview_1:
+    with st.container(border=True):
+        st.markdown("**1 · Who could buy / partner?**")
+        st.caption(
+            safe_text(
+                mandate_target_buyer_types
+                if "Buyer" in mandate_counterparty_focus
+                else mandate_target_partner_types,
+                "Define the target counterparties in the mandate.",
+            )
+        )
+        if "Partners" in mandate_counterparty_focus and mandate_target_partner_types:
+            st.caption("Partners: " + mandate_target_partner_types)
+
+with overview_2:
+    with st.container(border=True):
+        st.markdown("**2 · Can the offer compete?**")
+        st.caption(
+            "Trade feasibility: "
+            + safe_text(trade_feasibility_status, "To Verify")
+            + " · Tariff scenario: "
+            + safe_text(trade_tariff_scenario_status, "To Verify")
+        )
+        if mandate_ncm_code:
+            st.caption("NCM reference: " + mandate_ncm_code)
+
+with overview_3:
+    with st.container(border=True):
+        st.markdown("**3 · What must be prepared?**")
+        st.caption(
+            "Technical requirements: "
+            + safe_text(trade_technical_requirements_status, "To Verify")
+            + " · After-sales: "
+            + safe_text(trade_after_sales_status, "To Verify")
+        )
+        if mandate_known_constraints:
+            st.caption(mandate_known_constraints)
+
+st.caption(
+    "Research scores support prioritization. They do not establish buyer demand, "
+    "tariff entitlement, regulatory compliance or technical feasibility."
+)
+
 if "ranked_candidates" not in st.session_state:
     st.session_state.ranked_candidates = pd.DataFrame()
 
