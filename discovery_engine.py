@@ -5,6 +5,8 @@ from typing import Iterable
 
 import pandas as pd
 
+from commercial_mandate import MANDATE_FIELDS
+
 
 COUNTRY_TO_COMMERCIAL_REGION = {
     "Italy": "EU",
@@ -895,6 +897,7 @@ def qualification_handoff(
     )
 
     optional_fields = [
+        *MANDATE_FIELDS,
         "territory_profile_id",
         "vendor_profile_id",
         "territory_region",
