@@ -7,7 +7,7 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)
 [![Python CI](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml)
 
-A practical Commercial Intelligence application for discovering target accounts, preserving public evidence, separating **opportunity attractiveness** from **research completeness**, validating public contacts and handing qualification context downstream.
+A practical Commercial Intelligence application for executing international Business Development mandates: define the commercial corridor, discover buyers and partners, preserve public evidence, separate **opportunity attractiveness** from **research completeness**, organize trade-feasibility questions and hand qualification context downstream.
 
 > **Commercial logic first. Public evidence remains traceable. Unknown information stays unknown until validated.**
 
@@ -34,7 +34,11 @@ Opportunity Discovery Intelligence turns that research into an explainable workf
 ## Commercial Workflow
 
 ```text
-TARGET MARKET PROFILE
+COMMERCIAL MANDATE
+        ↓
+TARGET MARKET / COUNTERPARTY PROFILE
+        ↓
+TRADE & MARKET-ENTRY FEASIBILITY
         ↓
 PUBLIC-WEB DISCOVERY
         ↓
@@ -61,6 +65,38 @@ The system deliberately keeps different questions separate:
 - **Sales Motion:** What should happen next?
 
 A high-opportunity account is not automatically treated as a buying account.
+
+---
+
+## Commercial Mandate & Market Entry Context
+
+IDENTIFY can now begin with a shared **Commercial Mandate** rather than an isolated search.
+
+The mandate can preserve:
+
+- represented company / client
+- origin → target commercial corridor
+- product or solution
+- commercial objective
+- buyer vs partner discovery focus
+- target buyer types
+- target partner types
+- route-to-market hypothesis
+- value proposition
+- known constraints
+- HS / CN / NCM references when available
+- target territories and working languages
+- measurable success criteria
+
+For cross-border work, the app also carries an explicit **Trade & Market Entry Feasibility** layer with verification states for tariff scenarios, preferential treatment, Ex-Tarifário relevance, rules of origin, import requirements, technical requirements and after-sales needs.
+
+These are workflow states, not automatic legal, customs, tariff or technical conclusions.
+
+The application mirrors three practical market-entry questions:
+
+1. **Who could buy / partner?**
+2. **Can the offer compete?**
+3. **What must be prepared before execution?**
 
 ---
 
@@ -94,6 +130,9 @@ The workflow converts observed evidence into Sales Motion, Buyer Access, qualifi
 
 ## Core Capabilities
 
+- shared Commercial Mandate context
+- buyer / partner discovery focus
+- trade and market-entry feasibility states
 - configurable target-market profiles
 - Public Web / Tavily discovery
 - explainable Discovery and Account Opportunity scoring
@@ -167,7 +206,17 @@ Possible account states include:
 - **C&I Energy Consumer Target** — public operational signals support deeper commercial qualification
 - **Potential C&I Energy Consumer — Validate Load** — company identity is usable, but energy demand and photovoltaic feasibility remain unverified
 
-### 2. Medicina Estetica
+### 2. Macchinari & Attrezzature — Brasile
+
+A dedicated Europe → Brazil preset supports discovery of Brazilian industrial end users for European machinery and equipment.
+
+The preset is designed to be customized around the actual machine, industrial application and buyer profile. When the Commercial Mandate is switched to **Partners** or **Buyers + Partners**, distributor, sales-agent, integrator and technical-service profiles can be added to the route-to-market search.
+
+### 3. Caffè Specialty — Europa
+
+A Brazil → Europe preset supports discovery of European green-coffee importers, specialty roasters and relevant buyers. Quality, certifications, crop availability, logistics, pricing and actual buyer interest remain qualification items.
+
+### 4. Medicina Estetica
 
 A second preset supports opportunity discovery in the Italian **Medicina Estetica** market.
 
