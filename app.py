@@ -84,6 +84,11 @@ from commercial_mandate import (
     apply_mandate_fields,
     mandate_from_mapping,
 )
+from trade_feasibility import (
+    TradeFeasibility,
+    TRADE_FEASIBILITY_FIELDS,
+    apply_trade_feasibility_fields,
+)
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
     build_field_sales_intelligence,
@@ -394,6 +399,87 @@ with st.sidebar:
         mandate_target_territories=mandate_target_territories,
         mandate_working_languages=mandate_working_languages,
         mandate_success_criteria=mandate_success_criteria,
+    )
+
+    with st.expander("Trade & Market Entry Feasibility", expanded=False):
+        st.caption(
+            "Organize what is verified, what still requires specialist validation, "
+            "and what should not be assumed before commercial execution."
+        )
+        feasibility_statuses = [
+            "Unknown",
+            "To Verify",
+            "In Review",
+            "Verified",
+            "Not Applicable",
+        ]
+        trade_feasibility_status = st.selectbox(
+            "Overall feasibility",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_tariff_scenario_status = st.selectbox(
+            "Tariff / landed-cost scenario",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_preferential_treatment_status = st.selectbox(
+            "Preferential-treatment eligibility",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_ex_tarifario_status = st.selectbox(
+            "Ex-Tarifário relevance",
+            feasibility_statuses,
+            index=0,
+        )
+        trade_rules_of_origin_status = st.selectbox(
+            "Rules of origin",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_import_requirements_status = st.selectbox(
+            "Import / customs requirements",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_technical_requirements_status = st.selectbox(
+            "Technical / certification requirements",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_after_sales_status = st.selectbox(
+            "After-sales / local support requirements",
+            feasibility_statuses,
+            index=1,
+        )
+        trade_feasibility_notes = st.text_area(
+            "Commercial feasibility notes",
+            placeholder=(
+                "Known tariff scenario, competitiveness considerations, "
+                "product documentation, import questions..."
+            ),
+            height=80,
+        )
+        trade_specialist_validation_notes = st.text_area(
+            "Specialist validation notes",
+            placeholder=(
+                "Items for customs, engineering, regulatory or legal specialists to validate."
+            ),
+            height=80,
+        )
+
+    trade_feasibility = TradeFeasibility(
+        trade_feasibility_status=trade_feasibility_status,
+        trade_tariff_scenario_status=trade_tariff_scenario_status,
+        trade_preferential_treatment_status=trade_preferential_treatment_status,
+        trade_ex_tarifario_status=trade_ex_tarifario_status,
+        trade_rules_of_origin_status=trade_rules_of_origin_status,
+        trade_import_requirements_status=trade_import_requirements_status,
+        trade_technical_requirements_status=trade_technical_requirements_status,
+        trade_after_sales_status=trade_after_sales_status,
+        trade_feasibility_notes=trade_feasibility_notes,
+        trade_specialist_validation_notes=trade_specialist_validation_notes,
     )
 
     st.divider()
@@ -807,6 +893,10 @@ if run:
             ranked_result,
             commercial_mandate.to_dict(),
         )
+        ranked_result = apply_trade_feasibility_fields(
+            ranked_result,
+            trade_feasibility.to_dict(),
+        )
 
         if territory_mode and territory and source_mode != "Public web (Tavily)":
             st.session_state.searched_cluster_ids = list(selected_cluster_ids)
@@ -829,6 +919,10 @@ if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
     raw_ranked = apply_mandate_fields(
         raw_ranked,
         commercial_mandate.to_dict(),
+    )
+    raw_ranked = apply_trade_feasibility_fields(
+        raw_ranked,
+        trade_feasibility.to_dict(),
     )
     st.session_state.ranked_candidates = raw_ranked
 
@@ -2524,6 +2618,11 @@ else:
         for mandate_field in MANDATE_FIELDS:
             outreach_handoff[mandate_field] = safe_text(
                 selected.get(mandate_field, "")
+            )
+
+        for trade_field in TRADE_FEASIBILITY_FIELDS:
+            outreach_handoff[trade_field] = safe_text(
+                selected.get(trade_field, "")
             )
 
         handoff_col, engage_col = st.columns(2)
