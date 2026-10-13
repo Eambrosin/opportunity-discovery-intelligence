@@ -6,6 +6,7 @@ from typing import Iterable
 import pandas as pd
 
 from commercial_mandate import MANDATE_FIELDS
+from trade_feasibility import TRADE_FEASIBILITY_FIELDS
 
 
 COUNTRY_TO_COMMERCIAL_REGION = {
@@ -935,6 +936,7 @@ def qualification_handoff(
 
     optional_fields = [
         *MANDATE_FIELDS,
+        *TRADE_FEASIBILITY_FIELDS,
         "territory_profile_id",
         "vendor_profile_id",
         "territory_region",
