@@ -78,6 +78,12 @@ from discovery_engine import (
 from milano_discovery import build_milano_discovery_plan
 from evidence_snapshot import build_relevant_evidence_snapshot
 from presets import PRESETS, get_preset, profile_id_for
+from commercial_mandate import (
+    CommercialMandate,
+    MANDATE_FIELDS,
+    apply_mandate_fields,
+    mandate_from_mapping,
+)
 from sales_intelligence import build_sales_intelligence
 from field_sales_intelligence import (
     build_field_sales_intelligence,
@@ -152,7 +158,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-07-photovoltaic-energy-consumers"
+DEPLOYMENT_REVISION = "2026-10-13-commercial-mandate-foundation"
 
 
 def split_values(value: str) -> list[str]:
@@ -265,6 +271,123 @@ st.caption(
 )
 
 with st.sidebar:
+    st.header("Commercial Mandate")
+    st.caption(
+        "Optional project context shared across IDENTIFY, PRIORITIZE, PARTNER and ENGAGE."
+    )
+
+    with st.expander("Mandate / Market Entry Context", expanded=True):
+        mandate_name = st.text_input(
+            "Mandate name",
+            placeholder="e.g. Italian Packaging Machinery → Brazil",
+        )
+        mandate_client = st.text_input(
+            "Client / represented company",
+            placeholder="Company or project name",
+        )
+        mandate_corridor = st.selectbox(
+            "Trade / commercial corridor",
+            [
+                "Europe → Brazil / Mercosur",
+                "Brazil / Mercosur → Europe",
+                "Italy → Brazil",
+                "Brazil → Italy",
+                "Europe → Mercosur",
+                "Other international corridor",
+            ],
+        )
+        mandate_origin_market = st.text_input(
+            "Origin market",
+            value="Europe",
+        )
+        mandate_target_market = st.text_input(
+            "Target market",
+            value="Brazil",
+        )
+        mandate_product = st.text_input(
+            "Product / solution",
+            placeholder="What is being developed commercially?",
+        )
+        mandate_product_category = st.text_input(
+            "Product category",
+            placeholder="Industrial machinery, energy solution, specialty coffee...",
+        )
+        mandate_commercial_objective = st.text_area(
+            "Commercial objective",
+            placeholder="Develop buyers, validate distributors, build qualified pipeline...",
+            height=80,
+        )
+        mandate_target_buyer_types = st.text_area(
+            "Target buyer types",
+            placeholder="Manufacturers, industrial end users, importers...",
+            height=70,
+        )
+        mandate_target_partner_types = st.text_area(
+            "Target partner types",
+            placeholder="Distributor, sales agent, technical service partner...",
+            height=70,
+        )
+        mandate_route_to_market = st.text_area(
+            "Route-to-market hypothesis",
+            placeholder="Direct sales + local technical partner; distributor-led entry...",
+            height=70,
+        )
+        mandate_value_proposition = st.text_area(
+            "Mandate value proposition",
+            placeholder="Why should the target market care?",
+            height=70,
+        )
+        mandate_known_constraints = st.text_area(
+            "Known constraints / questions",
+            placeholder="Certification, local service, import rules, pricing, exclusivity...",
+            height=70,
+        )
+
+        code_a, code_b, code_c = st.columns(3)
+        with code_a:
+            mandate_hs_code = st.text_input("HS", placeholder="optional")
+        with code_b:
+            mandate_cn_code = st.text_input("CN", placeholder="optional")
+        with code_c:
+            mandate_ncm_code = st.text_input("NCM", placeholder="optional")
+
+        mandate_target_territories = st.text_input(
+            "Target territories",
+            placeholder="São Paulo, South/Southeast Brazil...",
+        )
+        mandate_working_languages = st.text_input(
+            "Working languages",
+            value="English, Portuguese, Italian",
+        )
+        mandate_success_criteria = st.text_area(
+            "Success criteria",
+            placeholder="Qualified meetings, active opportunities, quotations, sale...",
+            height=70,
+        )
+
+    commercial_mandate = CommercialMandate(
+        mandate_name=mandate_name,
+        mandate_client=mandate_client,
+        mandate_corridor=mandate_corridor,
+        mandate_origin_market=mandate_origin_market,
+        mandate_target_market=mandate_target_market,
+        mandate_product=mandate_product,
+        mandate_product_category=mandate_product_category,
+        mandate_commercial_objective=mandate_commercial_objective,
+        mandate_target_buyer_types=mandate_target_buyer_types,
+        mandate_target_partner_types=mandate_target_partner_types,
+        mandate_route_to_market=mandate_route_to_market,
+        mandate_value_proposition=mandate_value_proposition,
+        mandate_known_constraints=mandate_known_constraints,
+        mandate_hs_code=mandate_hs_code,
+        mandate_cn_code=mandate_cn_code,
+        mandate_ncm_code=mandate_ncm_code,
+        mandate_target_territories=mandate_target_territories,
+        mandate_working_languages=mandate_working_languages,
+        mandate_success_criteria=mandate_success_criteria,
+    )
+
+    st.divider()
     st.header("Target Market Profile")
 
     preset_name = st.selectbox(
@@ -669,6 +792,10 @@ if run:
             }
 
         ranked_result = screen_candidates(source_df, profile)
+        ranked_result = apply_mandate_fields(
+            ranked_result,
+            commercial_mandate.to_dict(),
+        )
 
         if territory_mode and territory and source_mode != "Public web (Tavily)":
             st.session_state.searched_cluster_ids = list(selected_cluster_ids)
@@ -686,6 +813,13 @@ if run:
         st.error(f"Discovery failed: {exc}")
 
 raw_ranked = st.session_state.ranked_candidates
+
+if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
+    raw_ranked = apply_mandate_fields(
+        raw_ranked,
+        commercial_mandate.to_dict(),
+    )
+    st.session_state.ranked_candidates = raw_ranked
 
 if (
     isinstance(raw_ranked, pd.DataFrame)
@@ -2392,7 +2526,7 @@ else:
         with engage_col:
             st.link_button(
                 "Open ENGAGE — Adaptive Outreach",
-                "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
+                "https://outreach-sequence-generator-eambrosin.streamlit.app/",
                 use_container_width=True,
             )
 
@@ -2599,7 +2733,7 @@ with nav_a:
 with nav_b:
     st.link_button(
         "Open ENGAGE — Adaptive Outreach",
-        "https://outreach-sequence-generator-7dcmglcxfnmszlodg8lqre.streamlit.app/",
+        "https://outreach-sequence-generator-eambrosin.streamlit.app/",
         use_container_width=True,
     )
 
