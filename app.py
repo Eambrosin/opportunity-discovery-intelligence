@@ -296,6 +296,14 @@ with st.sidebar:
                 "Other international corridor",
             ],
         )
+        mandate_counterparty_focus = st.selectbox(
+            "Discovery focus",
+            ["Buyers", "Partners", "Buyers + Partners"],
+            help=(
+                "Choose whether this mandate is primarily developing end buyers, "
+                "route-to-market partners, or both."
+            ),
+        )
         mandate_origin_market = st.text_input(
             "Origin market",
             value="Europe",
@@ -369,6 +377,7 @@ with st.sidebar:
         mandate_name=mandate_name,
         mandate_client=mandate_client,
         mandate_corridor=mandate_corridor,
+        mandate_counterparty_focus=mandate_counterparty_focus,
         mandate_origin_market=mandate_origin_market,
         mandate_target_market=mandate_target_market,
         mandate_product=mandate_product,
