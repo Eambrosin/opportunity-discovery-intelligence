@@ -82,7 +82,10 @@ from commercial_mandate import (
     CommercialMandate,
     MANDATE_FIELDS,
     apply_mandate_fields,
+    mandate_filename,
+    mandate_from_json,
     mandate_from_mapping,
+    mandate_to_json,
 )
 from trade_feasibility import (
     TradeFeasibility,
@@ -163,7 +166,7 @@ st.set_page_config(
 
 APP_DIR = Path(__file__).parent
 SAMPLE_PATH = APP_DIR / "data" / "sample_company_universe.csv"
-DEPLOYMENT_REVISION = "2026-10-13-commercial-mandate-foundation"
+DEPLOYMENT_REVISION = "2026-10-14-portable-mandate"
 
 
 def split_values(value: str) -> list[str]:
@@ -204,6 +207,13 @@ def safe_filename(value: str) -> str:
         .replace("/", "_")
         .replace("\\", "_")
     )
+
+
+def option_index(options: list[str], value: str, default: int = 0) -> int:
+    try:
+        return options.index(str(value).strip())
+    except (ValueError, AttributeError):
+        return default
 
 
 def render_status_card(
@@ -278,32 +288,59 @@ st.caption(
 with st.sidebar:
     st.header("Commercial Mandate")
     st.caption(
-        "Optional project context shared across IDENTIFY, PRIORITIZE, PARTNER and ENGAGE."
+        "Create the mandate once, export it as JSON and reuse the same context across "
+        "IDENTIFY, PRIORITIZE, PARTNER and ENGAGE."
     )
+
+    mandate_upload = st.file_uploader(
+        "Load Commercial Mandate",
+        type=["json"],
+        key="commercial_mandate_json",
+        help="Portable mandate JSON exported from any app in the suite.",
+    )
+    loaded_mandate = {}
+    if mandate_upload is not None:
+        try:
+            loaded_mandate = mandate_from_json(mandate_upload.getvalue())
+            st.success("Commercial Mandate loaded.")
+        except Exception as exc:
+            st.error(f"Could not load Commercial Mandate: {exc}")
 
     with st.expander("Mandate / Market Entry Context", expanded=True):
         mandate_name = st.text_input(
             "Mandate name",
+            value=loaded_mandate.get("mandate_name", ""),
             placeholder="e.g. Italian Packaging Machinery → Brazil",
         )
         mandate_client = st.text_input(
             "Client / represented company",
+            value=loaded_mandate.get("mandate_client", ""),
             placeholder="Company or project name",
         )
+        corridor_options = [
+            "Europe → Brazil / Mercosur",
+            "Brazil / Mercosur → Europe",
+            "Italy → Brazil",
+            "Brazil → Italy",
+            "Europe → Mercosur",
+            "Other international corridor",
+        ]
         mandate_corridor = st.selectbox(
             "Trade / commercial corridor",
-            [
-                "Europe → Brazil / Mercosur",
-                "Brazil / Mercosur → Europe",
-                "Italy → Brazil",
-                "Brazil → Italy",
-                "Europe → Mercosur",
-                "Other international corridor",
-            ],
+            corridor_options,
+            index=option_index(
+                corridor_options,
+                loaded_mandate.get("mandate_corridor", ""),
+            ),
         )
+        focus_options = ["Buyers", "Partners", "Buyers + Partners"]
         mandate_counterparty_focus = st.selectbox(
             "Discovery focus",
-            ["Buyers", "Partners", "Buyers + Partners"],
+            focus_options,
+            index=option_index(
+                focus_options,
+                loaded_mandate.get("mandate_counterparty_focus", "Buyers"),
+            ),
             help=(
                 "Choose whether this mandate is primarily developing end buyers, "
                 "route-to-market partners, or both."
@@ -311,74 +348,101 @@ with st.sidebar:
         )
         mandate_origin_market = st.text_input(
             "Origin market",
-            value="Europe",
+            value=loaded_mandate.get("mandate_origin_market", "Europe"),
         )
         mandate_target_market = st.text_input(
             "Target market",
-            value="Brazil",
+            value=loaded_mandate.get("mandate_target_market", "Brazil"),
         )
         mandate_product = st.text_input(
             "Product / solution",
+            value=loaded_mandate.get("mandate_product", ""),
             placeholder="What is being developed commercially?",
         )
         mandate_product_category = st.text_input(
             "Product category",
+            value=loaded_mandate.get("mandate_product_category", ""),
             placeholder="Industrial machinery, energy solution, specialty coffee...",
         )
         mandate_commercial_objective = st.text_area(
             "Commercial objective",
+            value=loaded_mandate.get("mandate_commercial_objective", ""),
             placeholder="Develop buyers, validate distributors, build qualified pipeline...",
             height=80,
         )
         mandate_target_buyer_types = st.text_area(
             "Target buyer types",
+            value=loaded_mandate.get("mandate_target_buyer_types", ""),
             placeholder="Manufacturers, industrial end users, importers...",
             height=70,
         )
         mandate_target_partner_types = st.text_area(
             "Target partner types",
+            value=loaded_mandate.get("mandate_target_partner_types", ""),
             placeholder="Distributor, sales agent, technical service partner...",
             height=70,
         )
         mandate_route_to_market = st.text_area(
             "Route-to-market hypothesis",
+            value=loaded_mandate.get("mandate_route_to_market", ""),
             placeholder="Direct sales + local technical partner; distributor-led entry...",
             height=70,
         )
         mandate_value_proposition = st.text_area(
             "Mandate value proposition",
+            value=loaded_mandate.get("mandate_value_proposition", ""),
             placeholder="Why should the target market care?",
             height=70,
         )
         mandate_known_constraints = st.text_area(
             "Known constraints / questions",
+            value=loaded_mandate.get("mandate_known_constraints", ""),
             placeholder="Certification, local service, import rules, pricing, exclusivity...",
             height=70,
         )
 
         code_a, code_b, code_c = st.columns(3)
         with code_a:
-            mandate_hs_code = st.text_input("HS", placeholder="optional")
+            mandate_hs_code = st.text_input(
+                "HS",
+                value=loaded_mandate.get("mandate_hs_code", ""),
+                placeholder="optional",
+            )
         with code_b:
-            mandate_cn_code = st.text_input("CN", placeholder="optional")
+            mandate_cn_code = st.text_input(
+                "CN",
+                value=loaded_mandate.get("mandate_cn_code", ""),
+                placeholder="optional",
+            )
         with code_c:
-            mandate_ncm_code = st.text_input("NCM", placeholder="optional")
+            mandate_ncm_code = st.text_input(
+                "NCM",
+                value=loaded_mandate.get("mandate_ncm_code", ""),
+                placeholder="optional",
+            )
 
         mandate_target_territories = st.text_input(
             "Target territories",
+            value=loaded_mandate.get("mandate_target_territories", ""),
             placeholder="São Paulo, South/Southeast Brazil...",
         )
         mandate_working_languages = st.text_input(
             "Working languages",
-            value="English, Portuguese, Italian",
+            value=loaded_mandate.get(
+                "mandate_working_languages",
+                "English, Portuguese, Italian",
+            ),
         )
         mandate_success_criteria = st.text_area(
             "Success criteria",
+            value=loaded_mandate.get("mandate_success_criteria", ""),
             placeholder="Qualified meetings, active opportunities, quotations, sale...",
             height=70,
         )
 
     commercial_mandate = CommercialMandate(
+        mandate_id=loaded_mandate.get("mandate_id", ""),
+        mandate_status=loaded_mandate.get("mandate_status", "Active"),
         mandate_name=mandate_name,
         mandate_client=mandate_client,
         mandate_corridor=mandate_corridor,
@@ -468,6 +532,15 @@ with st.sidebar:
             ),
             height=80,
         )
+
+    st.download_button(
+        "Download Commercial Mandate",
+        mandate_to_json(commercial_mandate.to_dict()),
+        file_name=mandate_filename(commercial_mandate.to_dict()),
+        mime="application/json",
+        use_container_width=True,
+        help="Reuse this mandate in PRIORITIZE, PARTNER or ENGAGE.",
+    )
 
     trade_feasibility = TradeFeasibility(
         trade_feasibility_status=trade_feasibility_status,
