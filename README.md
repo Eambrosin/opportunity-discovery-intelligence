@@ -134,6 +134,7 @@ The workflow converts observed evidence into Sales Motion, Buyer Access, qualifi
 ## Core Capabilities
 
 - shared Commercial Mandate context
+- shared Ambrosin Mandate Workspace navigation
 - buyer / partner discovery focus
 - buyer / route-to-market / execution-partner role separation
 - portable Commercial Mandate JSON
