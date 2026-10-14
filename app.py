@@ -542,7 +542,7 @@ with st.sidebar:
 
     commercial_mandate_payload = render_save_control(
         st,
-        commercial_mandate_payload,
+        commercial_mandate.to_dict(),
         source_stage="IDENTIFY",
         key_prefix="identify",
     )
