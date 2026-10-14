@@ -996,6 +996,8 @@ def qualification_handoff(
         "sales_evidence_gaps",
         "commercial_risk_flags",
         "sales_intelligence_basis",
+        "counterparty_role",
+        "counterparty_role_basis",
     ]
     for field_name in optional_fields:
         if field_name in working.columns:
