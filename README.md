@@ -61,6 +61,7 @@ The system deliberately keeps different questions separate:
 
 - **Account Opportunity:** How attractive does this account appear from observed evidence?
 - **Qualification Readiness:** How complete is the evidence needed for a useful commercial conversation?
+- **Counterparty Role:** Is the organization currently best treated as a buyer, route-to-market partner or execution / technical partner?
 - **Buyer Access:** Is there a usable public contact path?
 - **Sales Motion:** What should happen next?
 
@@ -71,6 +72,8 @@ A high-opportunity account is not automatically treated as a buying account.
 ## Commercial Mandate & Market Entry Context
 
 IDENTIFY can now begin with a shared **Commercial Mandate** rather than an isolated search.
+
+The mandate can be exported as a **portable JSON file** and reused across IDENTIFY, PRIORITIZE, PARTNER and ENGAGE.
 
 The mandate can preserve:
 
@@ -132,6 +135,8 @@ The workflow converts observed evidence into Sales Motion, Buyer Access, qualifi
 
 - shared Commercial Mandate context
 - buyer / partner discovery focus
+- buyer / route-to-market / execution-partner role separation
+- portable Commercial Mandate JSON
 - trade and market-entry feasibility states
 - configurable target-market profiles
 - Public Web / Tavily discovery
