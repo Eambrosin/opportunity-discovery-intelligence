@@ -1166,6 +1166,31 @@ m5.metric(
     f"{top['discovery_score'].mean():.1f}" if not top.empty else "0.0",
 )
 
+if "counterparty_role" in ranked.columns:
+    st.markdown("**Counterparty mix**")
+    role_counts = ranked["counterparty_role"].fillna("").astype(str)
+    r1, r2, r3, r4 = st.columns(4)
+    r1.metric(
+        "Buyers / End Customers",
+        int(role_counts.eq("Buyer / End Customer").sum()),
+    )
+    r2.metric(
+        "Route-to-Market Partners",
+        int(role_counts.eq("Route-to-Market Partner").sum()),
+    )
+    r3.metric(
+        "Execution / Technical Partners",
+        int(role_counts.eq("Execution / Technical Partner").sum()),
+    )
+    r4.metric(
+        "Partner Type to Validate",
+        int(role_counts.eq("Partner Candidate — Type to Validate").sum()),
+    )
+    st.caption(
+        "Counterparty role describes how an organization may contribute to the mandate. "
+        "It is a commercial hypothesis based on the current evidence, not a confirmed relationship."
+    )
+
 run_diag = st.session_state.get("discovery_run_diagnostics", {})
 if run_diag and source_mode == "Public web (Tavily)":
     generated_queries = int(run_diag.get("generated_queries", 0) or 0)
@@ -1506,6 +1531,7 @@ if "account_evidence_confidence" in ranking_view.columns:
 
 display_columns = [
     "company_name",
+    "counterparty_role",
     "account_opportunity_score",
     "qualification_readiness_status",
     "qualification_readiness_score",
@@ -1854,6 +1880,13 @@ if selected.get("professional_setting"):
     st.markdown(f"**Professional setting:** {selected['professional_setting']}")
 if selected.get("commercial_track"):
     st.markdown(f"**Commercial track:** {selected['commercial_track']}")
+if selected.get("counterparty_role"):
+    st.markdown(f"**Counterparty role:** {selected['counterparty_role']}")
+    if selected.get("counterparty_role_basis"):
+        st.caption(
+            "Role basis: " + safe_text(selected.get("counterparty_role_basis", ""))
+            + ". Validate the role before external execution."
+        )
 
 if selected.get("qualification_readiness_status"):
     st.markdown(
