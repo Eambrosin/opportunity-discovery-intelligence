@@ -79,6 +79,7 @@ from milano_discovery import build_milano_discovery_plan
 from evidence_snapshot import build_relevant_evidence_snapshot
 from presets import PRESETS, get_preset, profile_id_for
 from mandate_workspace import render_mandate_workspace
+from workspace_persistence import load_saved_mandate, render_save_control
 from commercial_mandate import (
     CommercialMandate,
     MANDATE_FIELDS,
@@ -293,13 +294,18 @@ with st.sidebar:
         "IDENTIFY, PRIORITIZE, PARTNER and ENGAGE."
     )
 
+    cloud_mandate = load_saved_mandate(
+        st,
+        key_prefix="identify",
+    )
+
     mandate_upload = st.file_uploader(
         "Load Commercial Mandate",
         type=["json"],
         key="commercial_mandate_json",
         help="Portable mandate JSON exported from any app in the suite.",
     )
-    loaded_mandate = {}
+    loaded_mandate = dict(cloud_mandate)
     if mandate_upload is not None:
         try:
             loaded_mandate = mandate_from_json(mandate_upload.getvalue())
@@ -534,10 +540,17 @@ with st.sidebar:
             height=80,
         )
 
+    commercial_mandate_payload = render_save_control(
+        st,
+        commercial_mandate_payload,
+        source_stage="IDENTIFY",
+        key_prefix="identify",
+    )
+
     st.download_button(
         "Download Commercial Mandate",
-        mandate_to_json(commercial_mandate.to_dict()),
-        file_name=mandate_filename(commercial_mandate.to_dict()),
+        mandate_to_json(commercial_mandate_payload),
+        file_name=mandate_filename(commercial_mandate_payload),
         mime="application/json",
         use_container_width=True,
         help="Reuse this mandate in PRIORITIZE, PARTNER or ENGAGE.",
@@ -856,7 +869,7 @@ profile = TargetProfile(
 render_mandate_workspace(
     st,
     "IDENTIFY",
-    commercial_mandate.to_dict(),
+    commercial_mandate_payload,
 )
 
 st.subheader("Commercial Mandate Overview")
@@ -1017,7 +1030,7 @@ if run:
         ranked_result = screen_candidates(source_df, profile)
         ranked_result = apply_mandate_fields(
             ranked_result,
-            commercial_mandate.to_dict(),
+            commercial_mandate_payload,
         )
         ranked_result = apply_trade_feasibility_fields(
             ranked_result,
@@ -1044,7 +1057,7 @@ raw_ranked = st.session_state.ranked_candidates
 if isinstance(raw_ranked, pd.DataFrame) and not raw_ranked.empty:
     raw_ranked = apply_mandate_fields(
         raw_ranked,
-        commercial_mandate.to_dict(),
+        commercial_mandate_payload,
     )
     raw_ranked = apply_trade_feasibility_fields(
         raw_ranked,
