@@ -31,6 +31,21 @@ Opportunity Discovery Intelligence turns that research into an explainable workf
 
 ---
 
+## Ambrosin Mandate Workspace
+
+IDENTIFY is one module of a shared **Commercial Mandate Workspace** used across the portfolio.
+
+The mandate can be created once, exported as portable JSON and reused in:
+
+- **IDENTIFY** — market entry, buyer / partner discovery and evidence gathering
+- **PRIORITIZE** — counterparty qualification and commercial priority
+- **PARTNER** — route-to-market and partner due diligence
+- **ENGAGE** — outreach, follow-up, active opportunity execution and mandate reporting
+
+If mandate context is already embedded in a downstream CSV handoff, the receiving app can resolve it directly without requiring the JSON to be uploaded again.
+
+---
+
 ## Commercial Workflow
 
 ```text
