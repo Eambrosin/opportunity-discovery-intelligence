@@ -280,7 +280,7 @@ server_tavily_key = get_secret("TAVILY_API_KEY")
 server_openai_key = get_secret("OPENAI_API_KEY")
 
 
-st.title("🔎 Opportunity Discovery Intelligence")
+st.title("🔎 Market Entry & Opportunity Intelligence")
 st.caption(
     "Evidence-aware account discovery, market adaptation and public-contact intelligence "
     "for Business Development, GTM and international growth."
