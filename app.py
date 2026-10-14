@@ -78,6 +78,7 @@ from discovery_engine import (
 from milano_discovery import build_milano_discovery_plan
 from evidence_snapshot import build_relevant_evidence_snapshot
 from presets import PRESETS, get_preset, profile_id_for
+from mandate_workspace import render_mandate_workspace
 from commercial_mandate import (
     CommercialMandate,
     MANDATE_FIELDS,
@@ -850,6 +851,12 @@ profile = TargetProfile(
     target_partner_types=split_values(mandate_target_partner_types),
     counterparty_focus=mandate_counterparty_focus,
     value_proposition=value_proposition,
+)
+
+render_mandate_workspace(
+    st,
+    "IDENTIFY",
+    commercial_mandate.to_dict(),
 )
 
 st.subheader("Commercial Mandate Overview")
