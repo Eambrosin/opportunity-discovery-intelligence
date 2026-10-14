@@ -2577,6 +2577,12 @@ else:
                 "commercial_track": safe_text(
                     selected.get("commercial_track", "")
                 ),
+                "counterparty_role": safe_text(
+                    selected.get("counterparty_role", "")
+                ),
+                "counterparty_role_basis": safe_text(
+                    selected.get("counterparty_role_basis", "")
+                ),
                 "territory_profile_id": safe_text(
                     selected.get("territory_profile_id", "")
                 ),
