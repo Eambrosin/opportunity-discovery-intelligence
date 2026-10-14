@@ -7,6 +7,7 @@ import pandas as pd
 
 from commercial_mandate import MANDATE_FIELDS
 from trade_feasibility import TRADE_FEASIBILITY_FIELDS
+from counterparty_roles import classify_counterparty_role
 
 
 COUNTRY_TO_COMMERCIAL_REGION = {
@@ -770,6 +771,12 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
         evidence,
         profile,
     )
+    counterparty_role, counterparty_role_basis = classify_counterparty_role(
+        evidence,
+        focus=profile.counterparty_focus,
+        target_partner_types=profile.target_partner_types,
+        commercial_track=entity_classification["commercial_track"],
+    )
 
     return {
         "discovery_score": discovery_score,
@@ -783,6 +790,8 @@ def score_candidate(row: pd.Series, profile: TargetProfile) -> dict:
         "excluded_matches": ", ".join(excluded_matches),
         "unknowns_to_validate": ", ".join(unknowns),
         "professional_setting": _professional_setting_signal(evidence, profile.industry),
+        "counterparty_role": counterparty_role,
+        "counterparty_role_basis": counterparty_role_basis,
         "commercial_track": entity_classification["commercial_track"],
         "target_account_ready": entity_classification["target_account_ready"],
         "target_account_reason": entity_classification["target_account_reason"],
