@@ -1,4 +1,4 @@
-# Opportunity Discovery Intelligence
+# Market Entry & Opportunity Intelligence
 
 ### Commercial Mandate | Evidence-Aware Public-Web Discovery | Buyer & Partner Handoffs
 
@@ -28,7 +28,7 @@ Typical problems include:
 - homonyms or weak LinkedIn matches entering outreach
 - research context lost when an account moves downstream
 
-Opportunity Discovery Intelligence turns that research into an explainable workflow.
+Market Entry & Opportunity Intelligence turns that research into an explainable workflow.
 
 ---
 
