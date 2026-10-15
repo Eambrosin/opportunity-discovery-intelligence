@@ -6,6 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)
 [![Python CI](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/Eambrosin/opportunity-discovery-intelligence/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-success)](https://github.com/Eambrosin/opportunity-discovery-intelligence/releases/tag/v2.0.0)
 
 A practical Commercial Intelligence application for executing international Business Development mandates: define the commercial corridor, discover buyers and partners, preserve public evidence, separate **opportunity attractiveness** from **research completeness**, organize trade-feasibility questions and hand qualification context downstream.
 
@@ -353,19 +354,25 @@ Secrets should be supplied through environment variables or Streamlit secrets an
 
 ## Current Version
 
-**Main branch — Workspace-enabled Commercial Intelligence**
+**v2.0.0 — Market Entry & Opportunity Intelligence**
 
-The tagged **v1.0.0** release established the evidence-aware discovery engine. The current main branch extends that foundation with:
+Version 2.0 is the current stable release of IDENTIFY. It establishes the application as the market-entry and opportunity-intelligence layer of the shared Commercial Mandate Workspace.
+
+Key release capabilities include:
 
 - shared private Commercial Mandate persistence
-- automatic `mandate_id` handoff across modules
-- buyer / partner branching
-- mandate-aware discovery queries
-- stronger filtering of editorial / market-research pages
-- vertical-neutral field-sales language
-- demo-safe separation between sample data and active mandates
+- automatic cross-app restoration through `mandate_id`
+- buyer / partner role-aware branching
+- mandate-aware public-web discovery
+- stronger filtering of editorial and market-research pages
+- Account Opportunity and Qualification Readiness separation
+- public decision-maker / contact validation
+- buyer handoff to PRIORITIZE
+- partner handoff to PARTNER
+- execution continuity into ENGAGE
 
-[Release Notes for v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)
+**[View v2.0.0 Release](https://github.com/Eambrosin/opportunity-discovery-intelligence/releases/tag/v2.0.0)**  
+[Release Notes](docs/RELEASE_NOTES_v2.0.0.md)
 
 ---
 
@@ -373,6 +380,7 @@ The tagged **v1.0.0** release established the evidence-aware discovery engine. T
 
 - [Portfolio Demo Walkthrough](docs/PORTFOLIO_DEMO.md)
 - [Detailed Technical Reference](docs/TECHNICAL_REFERENCE.md)
+- [v2.0.0 Release Notes](docs/RELEASE_NOTES_v2.0.0.md)
 - [v1.0.0 Release Notes](docs/RELEASE_NOTES_v1.0.0.md)
 
 ---
