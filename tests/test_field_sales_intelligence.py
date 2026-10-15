@@ -178,3 +178,30 @@ def test_verified_decision_maker_personalizes_field_next_action():
     assert result["visit_priority"] in {"Visit Now", "High Priority Visit"}
     assert "Fabrizio Cecchini" in result["field_next_best_action"]
     assert "Direttore Sanitario" in result["field_next_best_action"]
+
+
+def test_generic_mandate_field_sales_is_not_clinic_specific():
+    account = {
+        "company_name": "Brazilian Food Manufacturer",
+        "mandate_product": "Industrial packaging machinery",
+        "target_account_ready": True,
+        "account_opportunity_score": 70,
+        "qualification_readiness_score": 60,
+        "contact_readiness_score": 50,
+        "territory_location_confidence": 60,
+        "territory_location_basis": "Source-observed country",
+        "qualification_questions": "What packaging line is currently installed?",
+    }
+    result = build_field_sales_intelligence(account, None)
+    joined = " ".join([
+        result["product_fit_family"],
+        result["product_fit_status"],
+        result["product_fit_questions"],
+        result["field_visit_objective"],
+        result["field_opening_questions"],
+        result["field_sales_basis"],
+    ]).lower()
+    assert "industrial packaging machinery" in joined
+    assert "clinic" not in joined
+    assert "patient" not in joined
+    assert "clinical" not in joined
