@@ -1,4 +1,4 @@
-# v2.0.0 — Commercial Mandate & Market Entry Intelligence
+# v2.0.0 — Market Entry & Opportunity Intelligence
 
 ## Release Summary
 
