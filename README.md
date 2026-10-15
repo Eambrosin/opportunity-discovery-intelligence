@@ -35,14 +35,14 @@ Opportunity Discovery Intelligence turns that research into an explainable workf
 
 IDENTIFY is one module of a shared **Commercial Mandate Workspace** used across the portfolio.
 
-The mandate can be created once, exported as portable JSON and reused in:
+The mandate can be created once and reused across the workflow:
 
 - **IDENTIFY** — market entry, buyer / partner discovery and evidence gathering
 - **PRIORITIZE** — counterparty qualification and commercial priority
 - **PARTNER** — route-to-market and partner due diligence
 - **ENGAGE** — outreach, follow-up, active opportunity execution and mandate reporting
 
-If mandate context is already embedded in a downstream CSV handoff, the receiving app can resolve it directly without requiring the JSON to be uploaded again.
+When private cloud persistence is configured, the shared navigation carries an opaque **mandate_id** between modules and the receiving app resolves the canonical mandate automatically after Private Workspace Access is granted. Portable Commercial Mandate JSON and mandate context embedded in downstream CSV handoffs remain available as offline / fallback mechanisms.
 
 ---
 
