@@ -175,12 +175,29 @@ def product_fit_hypothesis(
     vendor_profile: dict | None,
 ) -> dict:
     if not vendor_profile:
+        mandate_product = _text(account.get("mandate_product"))
         return {
-            "product_fit_family": "",
+            "product_fit_family": mandate_product,
             "product_fit_score": 0.0,
-            "product_fit_status": "No vendor program selected",
-            "product_fit_basis": "",
-            "product_fit_questions": "",
+            "product_fit_status": (
+                "Mandate product — account fit to validate"
+                if mandate_product
+                else "No vendor program selected"
+            ),
+            "product_fit_basis": (
+                "The product is defined by the Commercial Mandate, but no account-specific "
+                "product-fit evidence has been established yet."
+                if mandate_product
+                else ""
+            ),
+            "product_fit_questions": (
+                "Which operational process is most relevant to this opportunity? | "
+                "Which equipment, solution or provider is used today, and where are the main gaps? | "
+                "What performance, capacity, cost, reliability or automation issue would justify evaluating an alternative? | "
+                "Who evaluates the solution, who approves the investment, and what is the expected timing?"
+                if mandate_product
+                else ""
+            ),
         }
 
     solutions = vendor_profile.get("solution_families", [])
@@ -260,9 +277,9 @@ def product_fit_hypothesis(
             "product_fit_status": "No product-specific evidence yet",
             "product_fit_basis": weak_basis,
             "product_fit_questions": (
-                "Which treatment categories are strategically most important today? | "
-                "Which technologies are already installed, and where are the main gaps? | "
-                "Which patient needs are growing fastest?"
+                "Which operational priorities are most important today? | "
+                "Which technologies, equipment or providers are already in place, and where are the main gaps? | "
+                "What business or operational need would justify evaluating an alternative?"
             ),
         }
 
@@ -442,22 +459,23 @@ def _field_objective(account: dict, product: dict, visit: dict) -> str:
     if visit["visit_priority"] == "Contact / Prepare First":
         return (
             f"Secure a conversation with the relevant decision-maker at {company}, confirm the current "
-            "technology/treatment portfolio and convert the account into a qualified field visit."
+            "process / solution environment and convert the account into a qualified commercial visit."
         )
 
     if family and family != "Needs discovery":
         return (
             f"Validate whether the observed need behind the {family} hypothesis is commercially relevant, "
-            "understand current equipment/provider performance, patient demand, investment timing and decision process."
+            "understand current equipment/provider performance, operational priorities, investment timing "
+            "and decision process."
         )
 
     if buyer:
         return (
-            "Use the visit to understand the clinic's priority treatment categories, patient demand, "
-            "installed technology, decision process and investment timing."
+            "Use the visit to understand the account's operational priorities, current solution or equipment, "
+            "decision process, investment timing and the measurable problem that would justify change."
         )
     return (
-        "Use the visit to establish the decision-maker, current technology portfolio, priority patient needs "
+        "Use the visit to establish the decision-maker, current solution environment, operational priorities "
         "and whether there is a commercially relevant problem worth solving."
     )
 
@@ -481,11 +499,11 @@ def _field_questions(
         )
 
     core_questions = [
-        "Which treatments currently generate the most patient demand and revenue?",
-        "What are patients asking for that the clinic cannot fully address today?",
-        "Which technologies are already installed, and what works well or poorly with them?",
-        "What would make a new technology commercially compelling for this clinic?",
-        "Who evaluates the technology, who approves the investment, and what is the expected timing?",
+        "Which operational process or business priority is most relevant to this opportunity?",
+        "What solution, equipment or provider is used today, and what works well or poorly?",
+        "Which performance, capacity, cost, reliability or automation gap matters most?",
+        "What would make an alternative solution commercially compelling for this account?",
+        "Who evaluates the solution, who approves the investment, and what is the expected timing?",
     ]
     questions.extend(core_questions)
     return list(dict.fromkeys(questions))[:6]
@@ -498,7 +516,7 @@ def build_field_sales_intelligence(
     """
     Build deterministic field-sales guidance from current account evidence.
 
-    Product fit is a commercial hypothesis, not a clinical recommendation.
+    Product fit is a commercial hypothesis, not a technical recommendation.
     Planning value is a scenario for territory/revenue modeling, not a quote,
     forecast or inferred willingness to pay.
     """
@@ -538,6 +556,6 @@ def build_field_sales_intelligence(
         "field_next_best_action": next_action,
         "field_sales_basis": (
             "Evidence-aware field-sales planning. Product fit is a hypothesis; planning value "
-            "is scenario-only; no purchase intent, clinical suitability or win probability is inferred."
+            "is scenario-only; no purchase intent, technical suitability or win probability is inferred."
         ),
     }
