@@ -65,7 +65,7 @@ PRESETS = {
     },
         "Macchinari & Attrezzature — Brasile": {
             "profile_id": "industrial_machinery_brazil",
-            "industry": "Macchinari e Attrezzature Industriali",
+            "industry": "Máquinas e Equipamentos Industriais",
             "countries": "Brazil",
             "regions": "LATAM",
             "business_models": (
@@ -75,7 +75,7 @@ PRESETS = {
                 "Industrial End User"
             ),
             "keywords": (
-                "linha de produção, automação industrial, máquinas industriais, "
+                "linha de produção, automação industrial, máquinas industriais, máquinas de embalagem, "
                 "equipamentos industriais, embalagem, envase, processamento, "
                 "modernização de planta, produtividade, capacidade produtiva, "
                 "manutenção industrial, expansão fabril"
