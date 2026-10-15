@@ -127,11 +127,6 @@ def normalize_candidate_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
 SEARCH_MARKET_LABELS = {
     "Brazil": "Brasil",
-    "Italy": "Italia",
-    "Germany": "Deutschland",
-    "Spain": "España",
-    "France": "France",
-    "Portugal": "Portugal",
 }
 
 
