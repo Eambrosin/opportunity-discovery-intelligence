@@ -864,6 +864,7 @@ profile = TargetProfile(
     target_partner_types=split_values(mandate_target_partner_types),
     counterparty_focus=mandate_counterparty_focus,
     value_proposition=value_proposition,
+    product_solution=mandate_product,
 )
 
 render_mandate_workspace(
@@ -1807,7 +1808,7 @@ else:
 
 validation_focus = safe_text(
     selected.get("technology_validation_questions", ""),
-    "Current treatment portfolio, installed technology, patient demand and investment timing",
+    "Current process / solution, operational need, decision process and investment timing",
 )
 
 with st.container(border=True):
@@ -1841,7 +1842,7 @@ with st.container(border=True):
         else:
             st.markdown("Not yet established")
 
-        st.markdown("**DELEO HYPOTHESIS**")
+        st.markdown("**PRODUCT-FIT HYPOTHESIS**")
         st.markdown(deleo_hypothesis)
         st.markdown("**WHAT TO DISCOVER**")
         st.markdown(validation_focus)
@@ -2061,7 +2062,7 @@ if field_visit_priority:
             for item in field_questions.split(" | ")
             if item.strip()
         ]
-        with st.expander("Questions to ask in the clinic", expanded=True):
+        with st.expander("Qualification questions for the account", expanded=True):
             st.caption(
                 "The data gets you to the right door. These questions are designed to discover "
                 "the real need before proposing a solution."
@@ -2834,16 +2835,16 @@ else:
                 "Select a strong account and run contact discovery to identify likely decision makers."
             )
 
-    st.markdown("**Market-level professional discovery**")
+    st.markdown("**Market-level decision-maker discovery**")
     st.caption(
-        "Useful for fragmented markets where the professional can be the lead itself, "
-        "such as aesthetic physicians, dermatologists, clinic owners and estheticians."
+        "Useful when named decision-makers are not visible on the account website. "
+        "Searches public professional-profile evidence aligned to the mandate's target roles."
     )
 
     market_professional_key = f"market_professionals::{preset_name}"
-    if st.button("Find Market Professionals on LinkedIn"):
+    if st.button("Find Market Decision-Makers on LinkedIn"):
         try:
-            with st.spinner("Searching public professional-profile evidence across the target market..."):
+            with st.spinner("Searching public decision-maker evidence across the target market..."):
                 professional_locations = (
                     selected_territory_regions
                     if territory_mode and selected_territory_regions
