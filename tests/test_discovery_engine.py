@@ -67,6 +67,20 @@ class OpportunityDiscoveryTests(unittest.TestCase):
         self.assertTrue(any("Renewable Energy" in query for query in queries))
         self.assertTrue(any("Italy" in query for query in queries))
 
+
+    def test_brazil_product_query_uses_mandate_product_and_local_market_label(self):
+        profile = TargetProfile(
+            industry="Máquinas e Equipamentos Industriais",
+            countries=["Brazil"],
+            search_archetypes=["indústria alimentícia linha de produção"],
+            required_keywords=["embalagem"],
+            product_solution="Industrial packaging machinery",
+        )
+        queries = build_search_queries(profile, max_queries=4)
+        self.assertEqual(queries[0], "Industrial packaging machinery Brasil")
+        self.assertTrue(any("indústria alimentícia" in query for query in queries))
+        self.assertFalse(any("Macchinari" in query for query in queries))
+
     def test_strong_candidate_ranks_first(self):
         ranked = screen_candidates(self.data, self.profile)
         self.assertEqual(ranked.iloc[0]["company_name"], "Strong Distributor")
