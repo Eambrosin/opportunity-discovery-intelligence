@@ -56,6 +56,7 @@ class TargetProfile:
     target_partner_types: list[str] = field(default_factory=list)
     counterparty_focus: str = "Buyers"
     value_proposition: str = ""
+    product_solution: str = ""
     weights: dict[str, float] = field(default_factory=lambda: DEFAULT_WEIGHTS.copy())
 
 
@@ -124,9 +125,29 @@ def normalize_candidate_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     return normalized
 
 
+SEARCH_MARKET_LABELS = {
+    "Brazil": "Brasil",
+    "Italy": "Italia",
+    "Germany": "Deutschland",
+    "Spain": "España",
+    "France": "France",
+    "Portugal": "Portugal",
+}
+
+
+def _search_market_label(value: str) -> str:
+    text = _text(value)
+    return SEARCH_MARKET_LABELS.get(text, text)
+
+
 def build_search_queries(profile: TargetProfile, max_queries: int = 8) -> list[str]:
     industry = _text(profile.industry)
-    markets = profile.countries or profile.regions or [""]
+    product = _text(profile.product_solution)
+    subject = product or industry
+    markets = [
+        _search_market_label(item)
+        for item in (profile.countries or profile.regions or [""])
+    ]
     models = [item for item in profile.business_models if _text(item)]
     archetypes = [item for item in profile.search_archetypes if _text(item)]
     keywords = [item for item in profile.required_keywords if _text(item)]
@@ -138,8 +159,11 @@ def build_search_queries(profile: TargetProfile, max_queries: int = 8) -> list[s
         if query and query not in queries and len(queries) < max_queries:
             queries.append(query)
 
+    # Lead with the mandate-defined product when available. The detailed queries
+    # then use local-market archetypes and keywords without repeating a generic
+    # industry label in every search.
     for market in markets:
-        add([industry, market])
+        add([subject, market])
 
     focus = _norm(profile.counterparty_focus)
     partner_types = [item for item in profile.target_partner_types if _text(item)]
@@ -149,12 +173,20 @@ def build_search_queries(profile: TargetProfile, max_queries: int = 8) -> list[s
         discovery_terms = list(dict.fromkeys(partner_types + archetypes + models))
     else:
         discovery_terms = archetypes or models
+
     for index, term in enumerate(discovery_terms):
         market = markets[index % len(markets)] if markets else ""
         keyword = keywords[index % len(keywords)] if keywords else ""
-        add([term, industry, keyword, market])
+        add([term, keyword, market])
         if len(queries) >= max_queries:
             return queries
+
+    if product:
+        for index, keyword in enumerate(keywords):
+            market = markets[index % len(markets)] if markets else ""
+            add([product, keyword, market])
+            if len(queries) >= max_queries:
+                return queries
 
     for index, model in enumerate(models):
         market = markets[index % len(markets)] if markets else ""
