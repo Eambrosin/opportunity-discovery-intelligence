@@ -34,6 +34,12 @@ ACCOUNT_DISCOVERY_EXCLUDE_DOMAINS = [
     "unimib.it",
     "doctolib.it",
     "giornaleitalianodinefrologia.it",
+    "exportplanning.com",
+    "statista.com",
+    "mordorintelligence.com",
+    "grandviewresearch.com",
+    "marketresearch.com",
+    "reportlinker.com",
 ]
 
 CONTENT_TITLE_PATTERNS = [
@@ -410,6 +416,15 @@ def _account_identity(title: str, url: str, company_name: str, domain: str) -> d
                 "/programma",
                 "/news/",
                 "/blog/",
+                "/article/",
+                "/articles/",
+                "/magazine/",
+                "/insight/",
+                "/insights/",
+                "/research/",
+                "/report/",
+                "/reports/",
+                "/press-release/",
                 "/lavora-con-noi",
                 "/jobs",
                 "/ricerca.php",
