@@ -1,6 +1,6 @@
 # Opportunity Discovery Intelligence
 
-### Evidence-Aware Target Account Discovery | Public-Web Enrichment | Qualification Handoff
+### Commercial Mandate | Evidence-Aware Public-Web Discovery | Buyer & Partner Handoffs
 
 [![Live App](https://img.shields.io/badge/Live%20App-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://opportunity-discovery-intelligence-eambrosin.streamlit.app/)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)
@@ -31,20 +31,35 @@ Opportunity Discovery Intelligence turns that research into an explainable workf
 
 ---
 
-## Ambrosin Mandate Workspace
 
-IDENTIFY is one module of a shared **Commercial Mandate Workspace** used across the portfolio.
+## Ambrosin Commercial Mandate Workspace
 
-The mandate can be created once and reused across the workflow:
+IDENTIFY is the entry point of a shared **Commercial Mandate Workspace** used across IDENTIFY, PRIORITIZE, PARTNER and ENGAGE.
 
-- **IDENTIFY** — market entry, buyer / partner discovery and evidence gathering
-- **PRIORITIZE** — counterparty qualification and commercial priority
-- **PARTNER** — route-to-market and partner due diligence
-- **ENGAGE** — outreach, follow-up, active opportunity execution and mandate reporting
+The live apps can use a private Supabase-backed workspace. A mandate is created once, saved centrally and opened in another module through an opaque **mandate_id** carried in the URL. After **Private Workspace Access** is granted, the receiving app resolves the canonical mandate automatically.
 
-When private cloud persistence is configured, the shared navigation carries an opaque **mandate_id** between modules and the receiving app resolves the canonical mandate automatically after Private Workspace Access is granted. Portable Commercial Mandate JSON and mandate context embedded in downstream CSV handoffs remain available as offline / fallback mechanisms.
+The workspace preserves:
+
+- client / represented company
+- commercial corridor
+- product / solution
+- buyer / partner focus
+- target market and territories
+- route-to-market hypothesis
+- value proposition and constraints
+- Trade & Market Entry Feasibility status
+- workflow stage and recommended progression
+
+Portable Commercial Mandate JSON remains available as a fallback and interchange format.
+
+The current navigation is role-aware:
+
+- **Buyers** → IDENTIFY → PRIORITIZE → ENGAGE
+- **Partners** → IDENTIFY → PARTNER → ENGAGE
+- **Buyers + Partners** → IDENTIFY can feed both PRIORITIZE and PARTNER before execution in ENGAGE
 
 ---
+
 
 ## Commercial Workflow
 
@@ -57,30 +72,30 @@ TRADE & MARKET-ENTRY FEASIBILITY
         ↓
 PUBLIC-WEB DISCOVERY
         ↓
-TARGET ACCOUNT CANDIDATES
+ACCOUNT / PARTNER IDENTITY SCREENING
         ↓
 ACCOUNT OPPORTUNITY
         +
 QUALIFICATION READINESS
         ↓
 ACCOUNT ENRICHMENT
+        +
+PUBLIC DECISION-MAKER / CONTACT VALIDATION
         ↓
-PUBLIC CONTACT VALIDATION
-        ↓
-SALES INTELLIGENCE
-        ↓
-ENGAGE HANDOFF v2
+BUYER CANDIDATES ───────→ PRIORITIZE ───────→ ENGAGE
+        │
+        └──────────────→ PARTNER CANDIDATES → PARTNER → ENGAGE
 ```
 
 The system deliberately keeps different questions separate:
 
 - **Account Opportunity:** How attractive does this account appear from observed evidence?
-- **Qualification Readiness:** How complete is the evidence needed for a useful commercial conversation?
-- **Counterparty Role:** Is the organization currently best treated as a buyer, route-to-market partner or execution / technical partner?
-- **Buyer Access:** Is there a usable public contact path?
-- **Sales Motion:** What should happen next?
+- **Qualification Readiness:** Is there enough verified information to work the account efficiently?
+- **Counterparty Role:** Buyer, route-to-market partner, execution / technical partner, or still to validate?
+- **Buyer / Partner Access:** Is there a usable public path to the relevant people?
+- **Sales Motion:** Research, enrich, qualify, partner-evaluate or engage?
 
-A high-opportunity account is not automatically treated as a buying account.
+A high-opportunity search result is not automatically treated as a buyer, partner or sales-ready lead.
 
 ---
 
@@ -115,6 +130,22 @@ The application mirrors three practical market-entry questions:
 1. **Who could buy / partner?**
 2. **Can the offer compete?**
 3. **What must be prepared before execution?**
+
+---
+
+## Current Interface
+
+The current live interface is organized around one commercial workflow:
+
+1. **Commercial Mandate** — create, select or restore the mandate from the shared workspace.
+2. **Trade & Market Entry Feasibility** — keep tariff, origin, NCM, technical and after-sales questions explicit.
+3. **Target Market Profile** — select a preset or customize the target industry, business models, fit signals, exclusions, decision-maker roles and search archetypes.
+4. **Discovery Source** — use a sample file, upload CSV or run public-web discovery with Tavily.
+5. **Discovery Diagnostics** — inspect generated queries, raw results, target-account candidates, confidence and research readiness.
+6. **Account Intelligence Workspace** — review evidence, enrich the account, validate public contact paths and assess the next commercial motion.
+7. **Execution Handoff** — export buyer candidates to PRIORITIZE, partner candidates to PARTNER and qualified execution context to ENGAGE.
+
+Public-web queries can use the product defined in the Commercial Mandate and localized market terms. Editorial / research pages are held back from commercial execution rather than treated as target accounts.
 
 ---
 
@@ -163,11 +194,13 @@ The workflow converts observed evidence into Sales Motion, Buyer Access, qualifi
 - selective Account Enrichment
 - direct website and public-contact evidence
 - sector-specific operational / technology evidence tracking
-- public LinkedIn person-profile validation
+- public decision-maker / professional-profile validation
 - homonym filtering using identity + role + location
 - deterministic Sales Intelligence
 - qualification questions and evidence gaps
-- ENGAGE Handoff v2
+- buyer handoff to PRIORITIZE
+- partner handoff to PARTNER
+- execution handoff to ENGAGE
 - optional evidence-aware AI brief
 - automated test suite and GitHub Actions CI
 
@@ -249,65 +282,70 @@ The generic engine is not limited to photovoltaic or medical-aesthetics use case
 
 ---
 
-## IDENTIFY → ENGAGE
 
-After public-contact validation, the application exports an **ENGAGE Handoff v2** containing:
+## IDENTIFY → PRIORITIZE / PARTNER → ENGAGE
 
-- account and contact identity
-- public LinkedIn profile candidate
+IDENTIFY now supports two downstream commercial branches.
+
+**Buyer / end-customer candidates** can be exported to PRIORITIZE with:
+
+- account identity and evidence
 - Account Opportunity
 - Qualification Readiness
+- counterparty role
 - Sales Motion
-- Buyer Access status
-- commercial hypothesis
-- evidence-based commercial angle
-- next best action
-- qualification questions
-- evidence gaps and validation flags
-- account website/contact evidence
-- territory and technology context
+- public-contact context
+- qualification questions and evidence gaps
+- Commercial Mandate and Trade Feasibility context
 
-The objective is to avoid repeating research downstream while keeping uncertainty explicit.
+**Route-to-market / execution partner candidates** can be moved into PARTNER for structured partner scoring and due diligence.
+
+Accounts that already have sufficient execution context can also be prepared for ENGAGE, but the preferred workflow is to preserve qualification or partner-validation logic before prospect-facing execution.
 
 ---
 
+
 ## Demo Flow
 
-A concise portfolio demonstration:
+A concise current portfolio demonstration:
 
-1. configure the target market
-2. run Discover & Rank
-3. inspect held-back vs target-account results
-4. open the **Account Intelligence Workspace**
-5. enrich the selected account
-6. validate a public LinkedIn contact
-7. review Sales Intelligence
-8. export **ENGAGE Handoff v2**
-9. open ENGAGE and generate qualification-first outreach
+1. create or load a Commercial Mandate
+2. select a target-market preset
+3. run **Public web (Tavily)** discovery
+4. inspect generated queries and discovery diagnostics
+5. separate direct accounts from held-back content / research pages
+6. review Account Opportunity and Qualification Readiness
+7. enrich a strong account and validate public decision-maker / contact evidence
+8. classify the account as buyer, route-to-market partner or execution partner
+9. export buyers to PRIORITIZE and partners to PARTNER
+10. continue qualified execution in ENGAGE under the same mandate
 
 Full walkthrough: [docs/PORTFOLIO_DEMO.md](docs/PORTFOLIO_DEMO.md)
 
 ---
+
 
 ## Architecture
 
 ```text
 app.py
   ↓
-discovery_engine.py / web_discovery.py
+commercial_mandate.py
   ↓
-territory_intelligence.py
+workspace_persistence.py / mandate_workspace.py
   ↓
-account_enrichment.py
+presets.py / discovery_engine.py
   ↓
-contact_discovery.py
+web_discovery.py / counterparty_roles.py
   ↓
-sales_intelligence.py
+account_enrichment.py / contact_discovery.py
   ↓
-ENGAGE handoff
+sales_intelligence.py / field_sales_intelligence.py
+  ↓
+PRIORITIZE / PARTNER / ENGAGE handoffs
 ```
 
-The deterministic decision logic is separated from presentation and optional AI assistance.
+The application keeps deterministic commercial logic separate from presentation and optional AI assistance. Shared cloud persistence stores mandate context; sensitive workspace access remains protected server-side.
 
 ---
 
@@ -338,13 +376,22 @@ Secrets should be supplied through environment variables or Streamlit secrets an
 
 ---
 
+
 ## Current Version
 
-**v1.0.0 — Evidence-Aware Opportunity Discovery Intelligence**
+**Main branch — Workspace-enabled Commercial Intelligence**
 
-This is the first stable portfolio release, covering public-web discovery, account ranking, Qualification Readiness, enrichment, public-contact validation, Sales Intelligence and ENGAGE Handoff v2. The main branch also includes post-release preset refinements for photovoltaic C&I end-customer discovery and Medicina Estetica.
+The tagged **v1.0.0** release established the evidence-aware discovery engine. The current main branch extends that foundation with:
 
-[Release Notes](docs/RELEASE_NOTES_v1.0.0.md)
+- shared private Commercial Mandate persistence
+- automatic `mandate_id` handoff across modules
+- buyer / partner branching
+- mandate-aware discovery queries
+- stronger filtering of editorial / market-research pages
+- vertical-neutral field-sales language
+- demo-safe separation between sample data and active mandates
+
+[Release Notes for v1.0.0](docs/RELEASE_NOTES_v1.0.0.md)
 
 ---
 
