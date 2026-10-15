@@ -1799,7 +1799,7 @@ if safe_text(selected.get("professional_setting", "")):
 why_now = " · ".join(why_now_parts[:4]) or "Complete the remaining evidence gaps before allocating field time."
 
 if product_family == "Needs discovery":
-    deleo_hypothesis = "No product-specific evidence yet — discover the clinic need before pitching a device."
+    deleo_hypothesis = "No product-specific evidence yet — validate the account need before proposing a solution."
 else:
     deleo_hypothesis = (
         f"{product_family}"
