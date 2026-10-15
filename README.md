@@ -149,32 +149,6 @@ Public-web queries can use the product defined in the Commercial Mandate and loc
 
 ---
 
-## Product Preview
-
-### 1. Discovery Executive Summary
-
-![Discovery Executive Summary](screenshots/01-discovery-summary.png)
-
-Raw search volume is separated into target-account candidates and held-back research results, with Qualification Readiness and territory context visible from the start.
-
-### 2. Target Account Ranking
-
-![Target Account Ranking](screenshots/02-target-account-ranking.png)
-
-Account candidates are ranked with explainable opportunity logic while directories, vendors and research-only results stay outside the commercial shortlist.
-
-### 3. Account Enrichment & Qualification
-
-![Account Enrichment & Qualification](screenshots/03-account-enrichment.png)
-
-The selected account is enriched with direct-website and public-contact evidence while research completeness remains separate from account attractiveness.
-
-### 4. Sales Intelligence & Qualification Context
-
-![Sales Intelligence & Qualification Context](screenshots/04-sales-intelligence.png)
-
-The workflow converts observed evidence into Sales Motion, Buyer Access, qualification questions, evidence gaps and next-best action without inferring purchase intent.
-
 ---
 
 ## Core Capabilities
